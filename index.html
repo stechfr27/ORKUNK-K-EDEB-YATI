@@ -2045,9 +2045,17 @@ function closeFlashcards(e) { if(e) e.stopPropagation(); document.getElementById
 const WORKER_URL = "https://small-grass-ecfa.axuemir52.workers.dev/";
 
 async function streamAI(prompt, targetEl, prefix, cacheKey) {
-    const storageKey = cacheKey ? (`${AI_PROMPT_VER}|${cacheKey}`) : null;
+    const kullaniciMesajiLower = prompt.toLowerCase().trim();
+    
+    // 🚨 SORU MODU KONTROLÜ: Kullanıcı soru istiyorsa cache mekanizmasını tamamen bypass et!
+    const isSoruTalebi = kullaniciMesajiLower.includes("soru sor") || 
+                         kullaniciMesajiLower.includes("test çöz") || 
+                         kullaniciMesajiLower.includes("soru getir");
 
-    // 1. Cache kontrolü
+    // Eğer soru talebiyse storageKey'i null yapıyoruz ki hiçbir cache'e dokunmasın
+    const storageKey = (cacheKey && !isSoruTalebi) ? (`${AI_PROMPT_VER}|${cacheKey}`) : null;
+
+    // 1. Cache kontrolü (Sadece normal sohbetlerde çalışır)
     if (storageKey && appData.aiCache[storageKey]) {
         targetEl.style.display = 'block';
         targetEl.innerHTML = prefix + appData.aiCache[storageKey];
@@ -2108,8 +2116,8 @@ async function streamAI(prompt, targetEl, prefix, cacheKey) {
             appData.aiCache[storageKey] = finalHTML;
             saveLocal();
             console.log("Normal sohbet cache'e kaydedildi. 💾");
-        } else if (json.isQuiz) {
-            console.log("Soru çözme modu: Hafızanın şişmemesi için cache pas geçildi. ⛔");
+        } else {
+            console.log("Soru çözme modu: Önbellek okuma/yazma tamamen pas geçildi. ⛔");
         }
 
     } catch(e) {
