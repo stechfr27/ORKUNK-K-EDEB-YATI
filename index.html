@@ -303,17 +303,14 @@
     </div>
 </div>
 
-<script>// Worker URL
-const WORKER_URL = "https://small-grass-ecfa.axuemir52.workers.dev";
-
-// KV'den gelen sorular
+<script>// KV'den gelen sorular
 let kvEdebiyatSorular = [];
 let kvYuklendi = false;
 
 async function kvSorulariniYukle() {
   if (kvYuklendi) return;
   try {
-    const res = await fetch(`${WORKER_URL}/sorular`);
+    const res = await fetch("https://small-grass-ecfa.axuemir52.workers.dev/sorular");
     if (!res.ok) throw new Error("HTTP " + res.status);
     const json = await res.json();
     if (json.ok && Array.isArray(json.sorular) && json.sorular.length > 0) {
@@ -1845,7 +1842,7 @@ function loadQuestion() {
     
     // YENİ EKLENEN: Konu ve Zorluk Bilgisini Ekrana Basma
   document.getElementById('q-meta').innerHTML = `
-    <div class="q-topic">📚 ${q.isNew ? '<span class="yeni-badge">🆕 YENİ</span>' : ''}Konu: ${q.t}</div>
+    <div class="q-topic">📚 ${q.isNew ? '<span style="background:linear-gradient(135deg,#ff9800,#ff5722);color:white;font-size:0.75rem;font-weight:900;padding:2px 8px;border-radius:6px;margin-right:6px;">🆕 YENİ</span>' : ''}Konu: ${q.t}</div>
     <div class="q-diff">⚡ ${getDifficultyHtml(q.diff)}</div>
 `;
 
