@@ -163,7 +163,24 @@
         .history-scroll::-webkit-scrollbar-thumb:hover { background: var(--gold); }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
         .blink-cursor { animation: blink 0.8s step-start infinite; color: var(--gold); font-weight: 900; }
-    </style>
+   .yeni-badge {
+  background: linear-gradient(135deg, #ff9800, #ff5722);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+  margin-right: 6px;
+  vertical-align: middle;
+  display: inline-block;
+  animation: pulseNew 1.5s ease-in-out infinite;
+}
+
+@keyframes pulseNew {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.5); }
+  50%       { box-shadow: 0 0 0 6px rgba(255, 152, 0, 0); }
+} </style>
 </head>
 <body>
 
@@ -286,7 +303,34 @@
     </div>
 </div>
 
-<script>// ==========================================
+<script>// Worker URL
+const WORKER_URL = "https://small-grass-ecfa.axuemir52.workers.dev";
+
+// KV'den gelen sorular
+let kvEdebiyatSorular = [];
+let kvYuklendi = false;
+
+async function kvSorulariniYukle() {
+  if (kvYuklendi) return;
+  try {
+    const res = await fetch(`${WORKER_URL}/sorular`);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const json = await res.json();
+    if (json.ok && Array.isArray(json.sorular) && json.sorular.length > 0) {
+      const yeniSorular = json.sorular.filter(s => s.isNew === true);
+      const eskiSorular = json.sorular.filter(s => s.isNew !== true);
+      yeniSorular.sort(() => Math.random() - 0.5);
+      eskiSorular.sort(() => Math.random() - 0.5);
+      kvEdebiyatSorular = [...yeniSorular, ...eskiSorular];
+      console.log(`✅ KV'den ${kvEdebiyatSorular.length} soru yüklendi (${yeniSorular.length} yeni).`);
+    }
+  } catch (err) {
+    console.warn("⚠️ KV soruları yüklenemedi:", err.message);
+  }
+  kvYuklendi = true;
+}
+
+kvSorulariniYukle();// ==========================================
 // 1. AYT EDEBİYAT SORU HAVUZU (120 Soru)
 // ==========================================
 const literatureQuestions = [
@@ -1735,25 +1779,46 @@ function changeBg() {
 }
 
 function startGame(mode) {
-    let name = document.getElementById('player-name').value.trim();
-    if (!name) return alert("Lütfen oyuna başlamadan önce ismini gir şampiyon!");
-    appData.playerName = name; saveLocal();
-    activeMode = mode;
-    
-    let raw = activeMode === 'ydt' ? [...ydtQuestions] : [...literatureQuestions];
-    questions = raw.sort(() => Math.random() - 0.5);
-    questions.forEach(q => { if(q.type==='test') q.shuffledO = [...new Set(q.o)].sort(()=>Math.random()-0.5); });
-    
-    document.getElementById('main-game-title').innerText = mode === 'ydt' ? "YDT İNGİLİZCE SİMÜLASYONU 🇬🇧" : "AYT EDEBİYAT SİMÜLASYONU 📚";
-    document.getElementById('notebook-panel').style.display = "block";
-    renderNotebook();
-    
-    userAnswers = new Array(questions.length).fill(null);
-    qIndex = 0;
-    
-    document.getElementById('start-screen').style.display='none'; 
-    document.getElementById('game-wrapper').style.display='flex';
-    loadQuestion();
+  let name = document.getElementById('player-name').value.trim();
+  if (!name) return alert("Lütfen oyuna başlamadan önce ismini gir şampiyon!");
+  appData.playerName = name;
+  saveLocal();
+  activeMode = mode;
+
+  let raw;
+  if (activeMode === 'ydt') {
+    raw = [...ydtQuestions].sort(() => Math.random() - 0.5);
+  } else {
+    if (kvEdebiyatSorular.length > 0) {
+      const kvSoruMetinleri = new Set(kvEdebiyatSorular.map(s => s.q));
+      const yerelFiltreli = [...literatureQuestions].filter(s => !kvSoruMetinleri.has(s.q));
+      yerelFiltreli.sort(() => Math.random() - 0.5);
+      const kvYeniSorular = kvEdebiyatSorular.filter(s => s.isNew === true);
+      const kvEskiSorular = kvEdebiyatSorular.filter(s => s.isNew !== true);
+      raw = [...kvYeniSorular, ...kvEskiSorular, ...yerelFiltreli];
+    } else {
+      raw = [...literatureQuestions].sort(() => Math.random() - 0.5);
+    }
+  }
+
+  questions = raw.map(q => {
+    if (q.type === 'test') {
+      return { ...q, shuffledO: [...new Set(q.o)].sort(() => Math.random() - 0.5) };
+    }
+    return { ...q };
+  });
+
+  document.getElementById('main-game-title').innerText =
+    mode === 'ydt' ? "YDT İNGİLİZCE SİMÜLASYONU 🇬🇧" : "AYT EDEBİYAT SİMÜLASYONU 📚";
+  document.getElementById('notebook-panel').style.display = "block";
+  renderNotebook();
+
+  userAnswers = new Array(questions.length).fill(null);
+  qIndex = 0;
+
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('game-wrapper').style.display = 'flex';
+  loadQuestion();
 }
 
 function updateCounters() {
@@ -1779,10 +1844,10 @@ function loadQuestion() {
     let q = questions[qIndex];
     
     // YENİ EKLENEN: Konu ve Zorluk Bilgisini Ekrana Basma
-    document.getElementById('q-meta').innerHTML = `
-        <div class="q-topic">📚 Konu: ${q.t}</div>
-        <div class="q-diff">⚡ ${getDifficultyHtml(q.diff)}</div>
-    `;
+  document.getElementById('q-meta').innerHTML = `
+    <div class="q-topic">📚 ${q.isNew ? '<span class="yeni-badge">🆕 YENİ</span>' : ''}Konu: ${q.t}</div>
+    <div class="q-diff">⚡ ${getDifficultyHtml(q.diff)}</div>
+`;
 
     document.getElementById('question').innerHTML = q.q;
     let isA = userAnswers[qIndex] !== null;
