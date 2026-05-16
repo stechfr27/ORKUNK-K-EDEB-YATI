@@ -180,7 +180,473 @@
 @keyframes pulseNew {
   0%, 100% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.5); }
   50%       { box-shadow: 0 0 0 6px rgba(255, 152, 0, 0); }
-} </style>
+}
+
+/* ── DEFTERİM TAM EKRAN KELİME ÇALIŞMA MODU ── */
+.defter-shell {
+  width: 100%;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255,215,0,0.10), transparent 26%),
+    radial-gradient(circle at 88% 20%, rgba(186,104,200,0.10), transparent 30%),
+    linear-gradient(160deg,#1a1208 0%,#070708 100%);
+  position: relative;
+  overflow: hidden;
+}
+.defter-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 49.85%, rgba(180,120,50,0.22) 50%, transparent 50.25%),
+    repeating-linear-gradient(transparent, transparent 31px, rgba(100,140,100,0.055) 32px);
+  z-index: 0;
+}
+.defter-topbar,
+.defter-main,
+.defter-bottom-nav,
+#defter-bos { position: relative; z-index: 5; }
+.defter-topbar {
+  display: grid;
+  z-index: 60;
+  overflow: visible;
+  grid-template-columns: minmax(160px, 260px) minmax(220px, 560px) minmax(230px, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: max(10px, env(safe-area-inset-top, 0px)) 18px 10px;
+  border-bottom: 1px solid rgba(255,215,0,0.20);
+  background: rgba(0,0,0,0.58);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.defter-quick-wrap { position: relative; justify-self: start; width: 100%; z-index: 120; }
+.defter-quick-btn {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,215,0,0.34);
+  background: rgba(255,215,0,0.09);
+  color: var(--gold);
+  font-weight: 900;
+  cursor: pointer;
+  padding: 10px 12px;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.defter-quick-btn:hover { background: rgba(255,215,0,0.16); }
+.defter-quick-list {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: calc(100% + 10px);
+  width: min(360px, 90vw);
+  max-height: min(58dvh, 520px);
+  overflow-y: auto;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(10,10,12,0.96);
+  border: 1px solid rgba(255,215,0,0.24);
+  box-shadow: 0 20px 45px rgba(0,0,0,0.65);
+  z-index: 9999;
+}
+.defter-quick-list.open { display: block; }
+.defter-quick-item {
+  width: 100%;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.045);
+  color: #f5f5f5;
+  text-align: left;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+}
+.defter-quick-item:hover,
+.defter-quick-item.active {
+  border-color: rgba(255,215,0,0.55);
+  background: rgba(255,215,0,0.12);
+  color: var(--gold);
+}
+.defter-search-wrap { justify-self: center; width: 100%; max-width: 560px; }
+#defter-search {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,215,0,0.42);
+  background: rgba(0,0,0,0.58);
+  color: #fff;
+  font-size: 16px;
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+}
+#defter-search:focus { border-color: var(--gold); box-shadow: 0 0 18px rgba(255,215,0,0.18); }
+.defter-right-tools {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.defter-tab-btn {
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  font-weight: 900;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: 0.2s;
+  color: #ccc;
+  background: rgba(255,255,255,0.08);
+}
+.defter-tab-btn.active { background: var(--gold); color: #000; border-color: var(--gold); }
+.defter-count-pill {
+  color: #bdbdbd;
+  font-size: 0.82rem;
+  font-weight: 800;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 999px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.045);
+}
+.defter-close {
+  font-size: 2rem;
+  cursor: pointer;
+  opacity: 0.72;
+  min-width: 38px;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.defter-close:hover { opacity: 1; color: var(--wrong); }
+.defter-main { flex: 1; min-height: 0; padding: 18px; overflow: hidden; }
+#defter-icerik, #defter-sayfa { height: 100%; }
+.defter-study-grid {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(360px, 0.9fr);
+  gap: 18px;
+}
+.defter-word-panel,
+.defter-test-panel {
+  min-height: 0;
+  overflow-y: auto;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(14,14,18,0.72);
+  box-shadow: 0 20px 45px rgba(0,0,0,0.38);
+  -webkit-overflow-scrolling: touch;
+}
+.defter-word-panel { padding: clamp(20px, 3vw, 42px); }
+.defter-word-kicker {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid rgba(255,215,0,0.18);
+  border-radius: 999px;
+  padding: 7px 12px;
+  color: #d8c987;
+  background: rgba(255,215,0,0.06);
+  font-weight: 800;
+  font-size: 0.82rem;
+  margin-bottom: 16px;
+}
+.defter-word-title {
+  color: var(--gold);
+  font-size: clamp(2.4rem, 6vw, 5.4rem);
+  line-height: 0.95;
+  margin: 0 0 18px;
+  letter-spacing: -0.04em;
+  text-shadow: 0 4px 30px rgba(255,215,0,0.22);
+  word-break: break-word;
+}
+.defter-local-meaning,
+.defter-ai-info {
+  border-radius: 18px;
+  padding: 18px;
+  line-height: 1.72;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.34);
+  margin-top: 14px;
+  color: #e6e6e6;
+  font-size: clamp(0.95rem, 1.2vw, 1.08rem);
+}
+.defter-local-meaning { border-left: 5px solid var(--gold); }
+.defter-ai-info { border-left: 5px solid var(--gemini-color); }
+.defter-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  margin-bottom: 8px;
+}
+.defter-mini-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+.defter-mini-btn {
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: #f5f5f5;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 900;
+}
+.defter-mini-btn:hover { border-color: var(--gold); background: rgba(255,215,0,0.10); color: var(--gold); }
+.defter-mini-btn.primary { border-color: rgba(186,104,200,0.38); background: linear-gradient(135deg, rgba(186,104,200,0.22), rgba(33,150,243,0.14)); color: #f4d6ff; }
+.defter-mini-btn.primary:hover { border-color: var(--gemini-color); color:#fff; }
+.defter-mini-btn.danger:hover { border-color: var(--wrong); background: rgba(244,67,54,0.15); color: #ffcdd2; }
+.defter-quality-note {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,152,0,0.26);
+  background: rgba(255,152,0,0.085);
+  color: #ffdfaa;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+.defter-status-line {
+  margin-top: 10px;
+  color: #aab7ff;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+.defter-kbd {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:22px;
+  height:22px;
+  padding:0 7px;
+  border-radius:7px;
+  border:1px solid rgba(255,255,255,0.16);
+  background:rgba(255,255,255,0.08);
+  color:#ddd;
+  font-size:0.78rem;
+  font-weight:900;
+}
+.defter-quick-help {
+  padding: 8px 10px 10px;
+  color:#aaa;
+  font-size:0.78rem;
+  line-height:1.4;
+}
+.defter-small-muted { color:#9aa; font-size:0.84rem; line-height:1.55; }
+.defter-test-panel {
+  padding: clamp(18px, 2.4vw, 30px);
+  display: flex;
+  flex-direction: column;
+}
+.defter-test-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(186,104,200,0.25);
+}
+.defter-test-title { font-size: 1.25rem; color: #e1bee7; font-weight: 950; }
+.defter-osym-badge {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: #ffcc80;
+  background: rgba(255,152,0,0.12);
+  border: 1px solid rgba(255,152,0,0.32);
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+.dsk-loading { color: #aaa; font-style: italic; font-size: 0.96rem; padding: 22px 0; text-align: center; }
+.dsk-soru-text {
+  font-size: clamp(1rem, 1.45vw, 1.18rem);
+  font-weight: 760;
+  color: #f0f0f0;
+  line-height: 1.68;
+  margin: 0 0 14px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(0,0,0,0.33);
+  border-left: 5px solid var(--gemini-color);
+}
+.dsk-option {
+  width: 100%;
+  padding: 13px 15px;
+  border-radius: 13px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.055);
+  color: white;
+  text-align: left;
+  font-size: 0.96rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: 0.18s;
+  line-height: 1.48;
+  margin-bottom: 10px;
+}
+.dsk-option:hover:not(:disabled) { background: rgba(255,255,255,0.12); border-color: var(--gold); transform: translateX(3px); }
+.dsk-option:disabled { cursor: default; }
+.dsk-option.dogru { background: rgba(76,175,80,0.35) !important; border-color: var(--correct) !important; }
+.dsk-option.yanlis { background: rgba(244,67,54,0.35) !important; border-color: var(--wrong) !important; }
+.dsk-option.secilen { box-shadow: 0 0 0 2px rgba(255,215,0,0.32), 0 10px 26px rgba(0,0,0,0.25); transform: translateX(4px); }
+.defter-question-meta {
+  display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0 0 12px;
+  color:#bfc8d8; font-size:0.82rem; font-weight:850;
+}
+.defter-level-pill, .defter-source-pill {
+  border-radius:999px; padding:6px 9px; border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.06); color:#d7d7d7;
+}
+.defter-level-pill { color:#ffdf9e; border-color:rgba(255,152,0,0.24); background:rgba(255,152,0,0.10); }
+.defter-history {
+  margin-top:14px; padding:12px; border-radius:16px;
+  border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.045);
+}
+.defter-history summary { cursor:pointer; color:#e9d5ff; font-weight:950; list-style:none; }
+.defter-history summary::-webkit-details-marker { display:none; }
+.defter-history-list { margin-top:10px; max-height:270px; overflow-y:auto; padding-right:4px; -webkit-overflow-scrolling:touch; }
+.defter-history-item {
+  width:100%; border:1px solid rgba(255,255,255,0.10); background:rgba(0,0,0,0.25);
+  color:#eee; border-radius:12px; padding:10px 11px; margin-bottom:8px; cursor:pointer; text-align:left;
+  display:grid; gap:4px; transition:0.18s;
+}
+.defter-history-item:hover, .defter-history-item.active { border-color:rgba(255,215,0,0.45); background:rgba(255,215,0,0.08); }
+.defter-history-top { display:flex; justify-content:space-between; gap:8px; color:#bbb; font-size:0.78rem; font-weight:900; }
+.defter-history-q { color:#fff; font-size:0.84rem; line-height:1.45; }
+.defter-history-result.ok { color:#a5d6a7; }
+.defter-history-result.no { color:#ef9a9a; }
+.defter-action-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+.defter-action-row .dsk-yeni-soru-btn { margin-top:0; }
+.dsk-feedback {
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-weight: 900;
+  line-height: 1.55;
+  margin: 6px 0 12px;
+}
+.dsk-feedback.ok { color: #c8e6c9; background: rgba(76,175,80,0.13); border: 1px solid rgba(76,175,80,0.22); }
+.dsk-feedback.no { color: #ffcdd2; background: rgba(244,67,54,0.13); border: 1px solid rgba(244,67,54,0.22); }
+.dsk-yeni-soru-btn {
+  margin-top: auto;
+  padding: 13px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(186,104,200,0.42);
+  background: linear-gradient(135deg,rgba(186,104,200,0.34),rgba(33,150,243,0.22));
+  color: #f4d6ff;
+  font-weight: 950;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: 0.25s;
+}
+.dsk-yeni-soru-btn:hover { filter: brightness(1.18); transform: translateY(-1px); }
+.defter-bottom-nav {
+  display: grid;
+  grid-template-columns: minmax(120px, 220px) minmax(160px, 1fr) minmax(120px, 220px);
+  gap: 12px;
+  align-items: center;
+  padding: 12px 20px max(12px, env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgba(255,215,0,0.18);
+  background: rgba(0,0,0,0.62);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.defter-nav-btn {
+  min-height: 46px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,215,0,0.32);
+  background: rgba(255,215,0,0.085);
+  color: var(--gold);
+  font-weight: 950;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: 0.2s;
+}
+.defter-nav-btn:hover:not(:disabled) { background: rgba(255,215,0,0.16); transform: translateY(-1px); }
+.defter-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+#defter-sayfa-no {
+  color: #d0d0d0;
+  text-align: center;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+.defter-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.10);
+  overflow: hidden;
+  margin-top: 7px;
+}
+.defter-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--gold), var(--gemini-color));
+  border-radius: inherit;
+  transition: width 0.25s;
+}
+.defter-error-note {
+  color: #ffccbc;
+  border: 1px solid rgba(255,112,67,0.25);
+  background: rgba(255,112,67,0.10);
+  border-radius: 12px;
+  padding: 10px 12px;
+  line-height: 1.55;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 900px) {
+  .defter-topbar { grid-template-columns: 1fr; gap: 10px; padding-left: 12px; padding-right: 12px; }
+  .defter-quick-wrap, .defter-search-wrap, .defter-right-tools { justify-self: stretch; }
+  .defter-right-tools { justify-content: space-between; }
+  .defter-main { padding: 12px; overflow-y: auto; }
+  #defter-icerik, #defter-sayfa { height: auto; min-height: 100%; }
+  .defter-study-grid { height: auto; min-height: 100%; grid-template-columns: 1fr; }
+  .defter-word-panel, .defter-test-panel { overflow: visible; }
+  .defter-word-title { font-size: clamp(2.2rem, 14vw, 4.4rem); }
+  .defter-bottom-nav { grid-template-columns: 1fr 1fr; }
+  #defter-sayfa-no { grid-column: 1 / -1; grid-row: 1; }
+  #defter-prev { grid-column: 1; grid-row: 2; }
+  #defter-next { grid-column: 2; grid-row: 2; }
+}
+
+@media (max-width: 560px) {
+  .defter-topbar { gap:8px; }
+  .defter-quick-btn, #defter-search { min-height:46px; }
+  .defter-right-tools { gap:6px; }
+  .defter-tab-btn { flex:1; padding:10px 8px; }
+  .defter-count-pill { order:3; width:calc(100% - 48px); text-align:center; }
+  .defter-close { order:4; }
+  .defter-main { padding:10px; }
+  .defter-word-panel, .defter-test-panel { border-radius:18px; padding:16px; }
+  .defter-word-title { font-size:clamp(2rem, 15vw, 3.5rem); margin-bottom:12px; }
+  .defter-local-meaning, .defter-ai-info { padding:14px; font-size:0.94rem; line-height:1.62; }
+  .defter-mini-actions { display:grid; grid-template-columns:1fr; gap:8px; }
+  .defter-test-head { flex-direction:column; }
+  .defter-osym-badge { width:max-content; }
+  .dsk-soru-text { padding:13px; font-size:0.98rem; line-height:1.58; }
+  .dsk-option { padding:13px; font-size:0.94rem; }
+  .defter-action-row { grid-template-columns:1fr; }
+  .defter-history-list { max-height:220px; }
+  .defter-bottom-nav { padding:10px 12px max(12px, env(safe-area-inset-bottom, 0px)); gap:8px; }
+  .defter-nav-btn { min-height:48px; font-size:0.94rem; }
+}
+
+</style>
 </head>
 <body>
 
@@ -196,6 +662,7 @@
     <input type="text" id="player-name" placeholder="İsmini Gir Şampiyon" autocomplete="off" />
     <button class="main-btn" id="start-btn" onclick="startGame('edebiyat')">EDEBİYAT MODU 📚</button>
     <button class="main-btn" id="ydt-btn" onclick="startGame('ydt')">İNGİLİZCE (YDT) 🇬🇧</button>
+    <button class="main-btn" id="defter-btn" onclick="openDefter(activeMode||'edebiyat')" style="background:linear-gradient(135deg,#5c4033,#8d6e63); color:white;">📓 DEFTERİM</button>
     <button class="main-btn" id="flashcards-btn" onclick="openFlashcards()">BELLEK KARTLARI 🃏</button>
     <button class="main-btn" id="history-btn" onclick="openGlobalHistory()">PROFİL & GEÇMİŞ 📊</button>
     <button class="main-btn" id="install-btn" style="display:none; background:linear-gradient(135deg,#1a1a2e,#16213e); border:2px solid var(--gold); color:var(--gold);" onclick="installPWA()">📲 ANA EKRANA EKLE</button>
@@ -207,6 +674,7 @@
         <div class="in-game-nav">
             <div class="nav-action-btn" id="nav-grid" onclick="openGridModal()">📋 SORU TABLOSU</div>
             <div class="nav-action-btn" id="nav-ai" onclick="openAiDictModal()">✨ AI SÖZLÜK</div>
+            <div class="nav-action-btn" id="nav-defter" onclick="openDefter(activeMode)" style="background:rgba(92,64,51,0.3); color:#bcaaa4;">📓 DEFTERİM</div>
             <div class="nav-action-btn" id="nav-theme" onclick="changeBg()">🎨 TEMA SEÇ</div>
             <div class="nav-action-btn" id="nav-home" onclick="returnToMainMenu()">🏠 ANA MENÜ</div>
         </div>
@@ -296,6 +764,49 @@
         <h2 style="text-align:center; color:var(--txt); margin-top:0;">🗂️ SORU SEÇİM TABLOSU</h2>
         <div id="grid-container"></div>
     </div>
+</div>
+
+<!-- ════════════════ DEFTERİM MODAL / TAM EKRAN KELİME ÇALIŞMA ════════════════ -->
+<div id="defter-modal" class="modal" onclick="closeDefter(event)" style="align-items:stretch; padding:0;">
+  <div class="defter-shell" onclick="event.stopPropagation()">
+    <div class="defter-topbar">
+      <!-- Sol üst: kelimeler arası hızlı geçiş -->
+      <div class="defter-quick-wrap">
+        <button type="button" class="defter-quick-btn" onclick="defterToggleKelimeler(event)">
+          <span>☰ Hızlı kelime geçişi</span><span id="defter-quick-current">1/1</span>
+        </button>
+        <div id="defter-quick-list" class="defter-quick-list"></div>
+      </div>
+
+      <!-- Üst orta: arama -->
+      <div class="defter-search-wrap">
+        <input id="defter-search" type="text" placeholder="🔍 Kelime ara — yanlış yazsan da yakalar…" oninput="defterArama(this.value)">
+      </div>
+
+      <!-- Sağ üst: mod, sayaç, kapat -->
+      <div class="defter-right-tools">
+        <button type="button" class="defter-tab-btn" id="dtab-edebiyat" onclick="defterTabDegistir('edebiyat')">📚 Edebiyat</button>
+        <button type="button" class="defter-tab-btn" id="dtab-ydt" onclick="defterTabDegistir('ydt')">🇬🇧 YDT</button>
+        <span class="defter-count-pill" id="defter-sayac">0 kelime</span>
+        <span class="defter-close" onclick="closeDefter()">×</span>
+      </div>
+    </div>
+
+    <div id="defter-bos" style="display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:16px;color:#aaa;font-size:1.1rem;text-align:center;padding:40px;">
+      <div style="font-size:4rem;">📭</div>
+      <div>Bu modda henüz yıldızlanmış kelime yok.<br>Sorularda <b style="color:var(--gold);">⭐</b> butonuna basınca burası çalışmaya başlar.</div>
+    </div>
+
+    <div class="defter-main" id="defter-icerik">
+      <div id="defter-sayfa"></div>
+    </div>
+
+    <div id="defter-nav" class="defter-bottom-nav">
+      <button type="button" onclick="defterOnceki()" id="defter-prev" class="defter-nav-btn">◀ Önceki</button>
+      <div id="defter-sayfa-no"></div>
+      <button type="button" onclick="defterSonraki()" id="defter-next" class="defter-nav-btn">Sonraki ▶</button>
+    </div>
+  </div>
 </div>
 
 <div id="history-modal" class="modal" onclick="closeHistoryModal(event)">
@@ -1791,10 +2302,16 @@ const BOSLUK_VERI = { playerName: "", edebiyat: { topics: {}, qs: {} }, ydt: { t
 
 // Önce localStorage'dan hızlıca yükle (anlık)
 let appData = JSON.parse(localStorage.getItem('megaSimData')) || JSON.parse(JSON.stringify(BOSLUK_VERI));
-if (!appData.aiCache) appData.aiCache = {};
-if (!appData.savedWords) appData.savedWords = { edebiyat: [], ydt: [] };
-if (!appData.edebiyat) appData.edebiyat = { topics: {}, qs: {} };
-if (!appData.ydt) appData.ydt = { topics: {}, qs: {} };
+function ensureDefterStores() {
+    if (!appData.aiCache) appData.aiCache = {};
+    if (!appData.savedWords) appData.savedWords = { edebiyat: [], ydt: [] };
+    if (!appData.edebiyat) appData.edebiyat = { topics: {}, qs: {} };
+    if (!appData.ydt) appData.ydt = { topics: {}, qs: {} };
+    if (!appData.defterQBank) appData.defterQBank = { edebiyat: {}, ydt: {} };
+    if (!appData.defterQBank.edebiyat) appData.defterQBank.edebiyat = {};
+    if (!appData.defterQBank.ydt) appData.defterQBank.ydt = {};
+}
+ensureDefterStores();
 
 // Kaydedilmiş oyun oturumu (kaldığı soru takibi)
 // appData içinde saklanır: appData._session = { mode, qIndex, questionsJson }
@@ -1818,6 +2335,7 @@ async function bulutVerisiYukle() {
                 // Bulut daha güncel → onu kullan, aiCache'i koru (büyük ve local yeterli)
                 const korunanCache = appData.aiCache;
                 appData = kv;
+                ensureDefterStores();
                 if (!appData.aiCache || Object.keys(appData.aiCache).length === 0) {
                     appData.aiCache = korunanCache;
                 }
@@ -1890,6 +2408,7 @@ function devamEt() {
 }
 let _kayitBekliyor = false;
 async function saveLocal() {
+    ensureDefterStores();
     appData._sonKayit = Date.now();
     appData._deviceName = CIHAZ.isim;
     appData._deviceId = DEVICE_ID;
@@ -2203,18 +2722,51 @@ function getFormat(k, mode) {
         : `<span style="font-size:1.5rem;">🦅</span> <b style="color:var(--gold);">ÖSYM Tüyosu:</b> ${m}`;
 }
 
-function toggleNotebookWord(w) { if(!appData.savedWords[activeMode].includes(w)){ appData.savedWords[activeMode].push(w); saveLocal(); renderNotebook(); }}
+function toggleNotebookWord(w) {
+    const mode = activeMode || 'edebiyat';
+    if(!appData.savedWords[mode].includes(w)){ appData.savedWords[mode].push(w); saveLocal(); renderNotebook(); }
+}
+
+function openNotebookWord(w) {
+    // Oyun/test ekranındaki küçük Defter listesinden kelimeye basınca
+    // tam Defter sayfasını aç; mümkünse AI notunu yeniden üretmeden kayıtlı veriden kullan.
+    const mode = activeMode || defterMod || 'edebiyat';
+    defterMod = mode;
+    ensureDefterStores();
+    if (!appData.savedWords[mode].includes(w)) appData.savedWords[mode].push(w);
+
+    defterFiltreli = null;
+    const search = document.getElementById('defter-search');
+    if (search) search.value = '';
+    const idx = (appData.savedWords[mode] || []).findIndex(x => defterNormalize(x) === defterNormalize(w));
+    defterSayfaNo = Math.max(0, idx);
+    defterSagQIndex = 0;
+
+    ['edebiyat','ydt'].forEach(m => {
+        const btn = document.getElementById('dtab-' + m);
+        if (btn) btn.classList.toggle('active', m === mode);
+    });
+
+    defterHydrateFromStored(w);
+    const modal = document.getElementById('defter-modal');
+    if (modal) modal.style.display = 'flex';
+    defterRender();
+}
+
 function renderNotebook() {
-    const l = document.getElementById('notebook-list'); l.innerHTML = '';
-    appData.savedWords[activeMode].forEach(w => {
-        l.innerHTML += `<div class="saved-word"><b onclick="openEagleModal('${w}')" style="cursor:pointer; display:block; padding-right:25px;">${w}</b><span class="del-word" onclick="removeW('${w}')">✖</span></div>`;
+    const l = document.getElementById('notebook-list');
+    if (!l) return;
+    l.innerHTML = '';
+    const mode = activeMode || 'edebiyat';
+    (appData.savedWords[mode] || []).forEach(w => {
+        l.innerHTML += `<div class="saved-word"><b onclick="openNotebookWord(${defterJSString(w)})" title="Defter çalışma ekranında aç" style="cursor:pointer; display:block; padding-right:25px;">${defterEscapeHTML(w)}</b><small style="display:block;color:#999;margin-top:4px;padding-right:25px;">Tıkla: kayıtlı bilgi + pekiştirme</small><span class="del-word" onclick="removeW(${defterJSString(w)})">✖</span></div>`;
     });
 }
-function removeW(w) { appData.savedWords[activeMode] = appData.savedWords[activeMode].filter(x=>x!==w); saveLocal(); renderNotebook(); }
+function removeW(w) { const mode = activeMode || 'edebiyat'; appData.savedWords[mode] = appData.savedWords[mode].filter(x=>x!==w); saveLocal(); renderNotebook(); }
 function returnToMainMenu() { document.getElementById('game-wrapper').style.display='none'; document.getElementById('start-screen').style.display='flex'; }
 
 // AI: prompt/Worker değişince sürümü artır — eski (hatalı) önbellek kullanılmasın
-const AI_PROMPT_VER = 'p7-claude-osym';
+const AI_PROMPT_VER = 'p10-defter-token-safe-natural';
 
 // Flashcards Sistemi
 let fcD = [], fcI = 0;
@@ -2301,6 +2853,1049 @@ function flipCard() {
 function nextCard() { if(fcI<fcD.length-1){ fcI++; renderFC(); }}
 function prevCard() { if(fcI>0){ fcI--; renderFC(); }}
 function closeFlashcards(e) { if(e) e.stopPropagation(); document.getElementById('flashcards-modal').style.display='none'; }
+
+// ════════════════════════════════════════════════════════
+// DEFTERİM SİSTEMİ — TAM EKRAN TEK KELİME ÇALIŞMA MODU
+// ════════════════════════════════════════════════════════
+let defterMod = 'edebiyat';
+let defterSayfaNo = 0;       // artık "aktif kelime indeksi" olarak kullanılıyor
+let defterFiltreli = null;   // null = hepsi, array = arama sonuçları
+let defterSagQIndex = 0;     // eski kodla uyumluluk için tutuluyor
+let defterSagSorular = {};   // mode|kelime → {bilgi, soru, secenekler, dogru, aciklama, cevaplandi, yukleniyor}
+const DEFTER_SOL_SAYI = 1;   // tek kelime = tek tam ekran sayfa
+
+function defterEscapeHTML(v) {
+    return String(v ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function defterJSString(v) {
+    // Inline onclick attribute'larında kelime adındaki tırnak/apostrof HTML'i kırmasın.
+    // JSON.stringify JS tarafını, defterEscapeHTML HTML attribute tarafını güvene alır.
+    return defterEscapeHTML(JSON.stringify(String(v ?? '')));
+}
+
+function defterNormalize(s) {
+    return String(s ?? '')
+        .toLowerCase()
+        .replace(/[çÇ]/g,'c')
+        .replace(/[şŞ]/g,'s')
+        .replace(/[ğĞ]/g,'g')
+        .replace(/[üÜ]/g,'u')
+        .replace(/[öÖ]/g,'o')
+        .replace(/[ıİ]/g,'i')
+        .replace(/[^a-z0-9\s]/g, '')
+        .trim();
+}
+
+function defterFuzzy(word, pat) {
+    let wi = 0, pi = 0;
+    const w = defterNormalize(word), p = defterNormalize(pat);
+    if (!p) return true;
+    while (wi < w.length && pi < p.length) {
+        if (w[wi] === p[pi]) pi++;
+        wi++;
+    }
+    return pi === p.length;
+}
+
+function defterHash(s) {
+    let h = 2166136261;
+    const str = String(s ?? '');
+    for (let i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+}
+
+function defterShuffleArray(arr, seedText) {
+    const a = arr.slice();
+    let seed = defterHash(seedText || Date.now());
+    const rnd = () => {
+        seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+        return seed / 4294967296;
+    };
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(rnd() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+function defterAIKey(kelime) {
+    return `${defterMod}|${String(kelime || '').toLowerCase().trim()}`;
+}
+
+function defterCacheKey(kelime) {
+    return `${AI_PROMPT_VER}|defter_full_${defterMod}_${String(kelime || '').toLowerCase().trim()}`;
+}
+
+function defterWordStoreKey(kelime) {
+    const norm = defterNormalize(kelime);
+    return norm || String(kelime || '').toLowerCase().trim();
+}
+
+function defterArchive(kelime, mode = defterMod) {
+    ensureDefterStores();
+    const m = mode === 'ydt' ? 'ydt' : 'edebiyat';
+    const k = defterWordStoreKey(kelime);
+    if (!appData.defterQBank[m][k]) {
+        appData.defterQBank[m][k] = { word: String(kelime || ''), level: 3, questions: [], noteHistory: [] };
+    }
+    if (!Array.isArray(appData.defterQBank[m][k].questions)) appData.defterQBank[m][k].questions = [];
+    if (!Array.isArray(appData.defterQBank[m][k].noteHistory)) appData.defterQBank[m][k].noteHistory = [];
+    if (!appData.defterQBank[m][k].level) appData.defterQBank[m][k].level = 3;
+    return appData.defterQBank[m][k];
+}
+
+function defterGetLevel(kelime) {
+    const a = defterArchive(kelime);
+    const n = Number(a.level || 3);
+    return Math.max(3, Math.min(5, Number.isFinite(n) ? n : 3));
+}
+
+function defterBumpLevel(kelime) {
+    const a = defterArchive(kelime);
+    const next = Math.min(5, Math.max(3, Number(a.level || 3) + 1));
+    a.level = next;
+    return next;
+}
+
+function defterQuestionId() {
+    return 'dq_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+function defterPersistQuestion(kelime, data, meta = {}) {
+    if (!data || !data.soru || !Array.isArray(data.secenekler) || data.secenekler.length < 5) return null;
+    const a = defterArchive(kelime);
+    const qid = data.qid || defterQuestionId();
+    const item = {
+        id: qid,
+        word: String(kelime || ''),
+        createdAt: Date.now(),
+        level: Math.max(3, Math.min(5, Number(meta.level || data.level || a.level || 3))),
+        source: meta.source || (data.fallback ? 'yerel' : 'ai'),
+        soru: String(data.soru || ''),
+        secenekler: data.secenekler.slice(0, 5).map(x => defterCleanOption(x, kelime)),
+        dogru: Number(data.dogru || 0),
+        aciklama: String(data.aciklama || ''),
+        cevaplandi: data.cevaplandi,
+        correct: data.cevaplandi === undefined ? undefined : data.cevaplandi === Number(data.dogru || 0)
+    };
+    a.questions.unshift(item);
+    if (a.questions.length > 120) a.questions = a.questions.slice(0, 120);
+    data.qid = qid;
+    data.level = item.level;
+    data.source = item.source;
+    saveLocal();
+    return qid;
+}
+
+function defterPersistNote(kelime, bilgi, level) {
+    if (!bilgi) return;
+    const a = defterArchive(kelime);
+    a.noteHistory.unshift({ id: defterQuestionId(), createdAt: Date.now(), level: level || defterGetLevel(kelime), bilgi: String(bilgi) });
+    if (a.noteHistory.length > 40) a.noteHistory = a.noteHistory.slice(0, 40);
+    saveLocal();
+}
+
+function defterDict(mode = defterMod) {
+    return mode === 'ydt' ? ydtDict : edebiyatDict;
+}
+
+function defterFindDictKey(kelime, mode = defterMod) {
+    const d = defterDict(mode);
+    const direct = d[kelime] !== undefined ? kelime : null;
+    if (direct) return direct;
+    const nk = defterNormalize(kelime);
+    return Object.keys(d).find(k => defterNormalize(k) === nk) || null;
+}
+
+function defterPlainFromValue(v) {
+    if (!v) return '';
+    if (typeof v === 'object') return `${v.m || ''} ${v.f || ''} ${v.e || ''}`.replace(/\s+/g, ' ').trim();
+    return String(v).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function defterShortText(text, max = 155) {
+    const t = String(text || '').replace(/\s+/g, ' ').trim();
+    return t.length > max ? t.slice(0, max - 1).trim() + '…' : t;
+}
+
+function defterNearbyTerms(kelime, count = 4) {
+    const d = defterDict();
+    const keys = Object.keys(d);
+    const foundKey = defterFindDictKey(kelime) || kelime;
+    const idx = keys.findIndex(k => defterNormalize(k) === defterNormalize(foundKey));
+    const out = [];
+
+    const add = (k) => {
+        if (!k || defterNormalize(k) === defterNormalize(kelime)) return;
+        if (out.some(x => defterNormalize(x.term) === defterNormalize(k))) return;
+        out.push({ term: k, meaning: defterPlainFromValue(d[k]) });
+    };
+
+    if (idx >= 0) {
+        for (let off = 1; out.length < count && off < Math.max(8, keys.length); off++) {
+            add(keys[idx - off]);
+            if (out.length >= count) break;
+            add(keys[idx + off]);
+        }
+    }
+
+    if (out.length < count) {
+        defterShuffleArray(keys, kelime + '|nearby').forEach(add);
+    }
+    return out.slice(0, count);
+}
+
+function defterCleanOption(opt, kelime = '') {
+    let s = String(opt ?? '')
+        .replace(/^\s*[A-E]\s*[\)\].:-]\s*/i, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    // AI bazen mekanik biçimde "Bu başlık, ... ile tamamen aynıdır" gibi şıklar kuruyor.
+    // Bunu ekranda daha doğal bir sınav diliyle gösteriyoruz.
+    const subject = kelime ? `“${kelime}”` : 'Bu ifade';
+    const exactSame = s.match(/^Bu başlık,?\s*[“"]([^”"]+)[”"]\s+ile\s+bütün\s+özellikleri\s+bakımından\s+tamamen\s+aynıdır\.?$/i);
+    if (exactSame) {
+        const other = exactSame[1];
+        s = defterNormalize(other) === defterNormalize(kelime)
+            ? `${subject} için ayırt edici bir özellikten söz edilemez.`
+            : `${subject} ile “${other}” arasında ayırt edici hiçbir fark yoktur.`;
+    }
+
+    s = s
+        .replace(/\bBu başlık\b/gi, subject)
+        .replace(/\bBu kavram\b/gi, subject)
+        .replace(/\bBu kelime\b/gi, subject)
+        .replace(/\bbu başlık\b/g, subject)
+        .trim();
+    return s;
+}
+
+function defterCleanNoteText(text, kelime = '') {
+    let t = String(text ?? '').replace(/```json|```/gi, '').trim();
+    if (!t) return '';
+
+    // Not alanına soru/şık karışırsa ilk soru bloğundan itibaren kes.
+    const cutPatterns = [
+        /\n\s*(Soru|Pekiştirme\s+sorusu|Test\s+sorusu|Cevap|Doğru\s+cevap)\s*[:：]/i,
+        /\n\s*[A-E]\s*[\)\].:-]\s+/i,
+        /\n\s*(Seçenekler|Şıklar)\s*[:：]/i
+    ];
+    for (const re of cutPatterns) {
+        const m = t.search(re);
+        if (m > 0) t = t.slice(0, m).trim();
+    }
+
+    // Tek satırda soru yazdıysa temizle.
+    t = t
+        .replace(/\b(?:A\)|B\)|C\)|D\)|E\)).*$/is, '')
+        .replace(/(?:Soru|Pekiştirme sorusu|Test sorusu)\s*[:：].*$/is, '')
+        .trim();
+
+    const plain = t.replace(/<[^>]*>/g, '').trim();
+    if (plain.length < 24) {
+        const base = defterGetirAnlam(kelime, true) || '';
+        return base ? `**Kayıtlı veriden hızlı not:** ${base}` : t;
+    }
+    return t;
+}
+
+function defterBuildStoredInfo(kelime) {
+    const base = defterGetirAnlam(kelime, true) || '';
+    if (!base) return '';
+    const isYdt = defterMod === 'ydt';
+    return isYdt
+        ? `**Kayıtlı veriden hızlı not:** “${kelime}” için temel bilgi: ${base}\n\n**Çalışma ipucu:** Bu bilgiyi cümledeki bağlam yönüyle birlikte düşün; yakın anlamlı seçenekler özellikle yanıltıcı olabilir.`
+        : `**Kayıtlı veriden hızlı not:** “${kelime}” için temel bilgi: ${base}\n\n**Çalışma ipucu:** Bu kavramı yalnız tanımıyla değil; dönem, tür, sanatçı/eser ilişkisi ve yakın kavramlardan ayrılan yönüyle hatırla.`;
+}
+
+function defterShuffleQuestion(qObj, seed, kelime = '') {
+    const opts = Array.isArray(qObj.secenekler) ? qObj.secenekler.map(x => defterCleanOption(x, kelime)).filter(Boolean) : [];
+    let dogru = Number(qObj.dogru);
+    if (!Number.isInteger(dogru) || dogru < 0 || dogru >= opts.length) dogru = 0;
+    const packed = opts.slice(0, 5).map((txt, idx) => ({ txt, correct: idx === dogru }));
+    const shuffled = defterShuffleArray(packed, `${seed}|${qObj.soru}|${dogru}`);
+    const newDogru = Math.max(0, shuffled.findIndex(x => x.correct));
+    return { ...qObj, secenekler: shuffled.map(x => x.txt), dogru: newDogru };
+}
+
+function defterQuestionLooksFlat(soru, secenekler) {
+    const s = String(soru || '').toLowerCase();
+    const opts = (secenekler || []).join(' ').toLowerCase();
+    const direct = /(nedir\??|anlamı\s+hangisi|tanımı\s+hangisi|ne\s+ad\s+verilir|ösym\s+tarzı|ölçme\s+mantığına\s+göre)/i.test(s);
+    const mechanical = /(bu başlık|bütün özellikleri bakımından tamamen aynıdır|resmi ösym|ölçme mantığı|sert\/?eleyici)/i.test(opts + ' ' + s);
+    const tooShort = String(soru || '').replace(/<[^>]*>/g, '').length < 105;
+    const allOptionsTiny = (secenekler || []).filter(x => String(x).length < 22).length >= 4;
+    return (direct && tooShort) || (direct && allOptionsTiny) || mechanical || /sadece.*ezber/i.test(opts);
+}
+
+function defterFallbackPekistirme(kelime, hataMesaji = '', seed = Date.now(), level = 3) {
+    const zorluk = Math.max(3, Math.min(5, Number(level || 3)));
+    const anlamPlain = defterGetirAnlam(kelime, true) || '';
+    const isYdt = defterMod === 'ydt';
+    const nearby = defterNearbyTerms(kelime, 4);
+    const n1 = nearby[0] || { term: isYdt ? 'a close distractor' : 'yakın kavram', meaning: '' };
+    const n2 = nearby[1] || { term: isYdt ? 'another option' : 'başka bir başlık', meaning: '' };
+    const n3 = nearby[2] || { term: isYdt ? 'a misleading option' : 'üçüncü çeldirici', meaning: '' };
+    const baseInfo = anlamPlain || (isYdt
+        ? `${kelime} kelimesinin anlamı bağlama göre ayırt edilmelidir.`
+        : `${kelime} kavramı/başlığı edebî bağlam, dönem, tür ve ayırt edici özellikleriyle birlikte düşünülmelidir.`);
+
+    let raw;
+    if (isYdt) {
+        const sentence = zorluk >= 5
+            ? `The committee rejected the initial report not because it was brief, but because its conclusions about the issue were too ${kelime} to guide policy.`
+            : `The speaker used “${kelime}” in a context where the surrounding clues point to “${defterShortText(baseInfo, 90)}”.`;
+        raw = {
+            bilgi: `**Sınav odağı:** “${kelime}” için yalnızca Türkçe karşılığı ezberlemek yetmez; cümledeki mantık ilişkisini ve yakın çeldiricileri birlikte okumak gerekir.\n\n**Kayıtlı bilgi:** ${baseInfo}\n\n**Tuzak:** Zorluk arttıkça seçenekler anlamca yakınlaşır; doğru seçenek bağlamın yönünü değiştirmeyen seçenektir.`,
+            soru: zorluk >= 5
+                ? `${sentence}\n\nWhich of the following is closest in meaning to the underlined word as used in this sentence?`
+                : `${sentence}\n\nWhich option best preserves the intended meaning in this context?`,
+            secenekler: [
+                defterShortText(baseInfo, 140),
+                `A meaning close to “${n1.term}” but too narrow for the context`,
+                `A contrastive meaning that reverses the sentence logic`,
+                `A broader meaning that weakens the specific clue in the sentence`,
+                `A grammatically possible but semantically unsupported choice`
+            ],
+            dogru: 0,
+            aciklama: `Doğru seçenek, bağlamın yönünü bozmadan “${kelime}” kelimesinin anlamını korur; diğerleri YDT’de sık görülen yakın ama bağlam dışı çeldiricilerdir.`
+        };
+    } else if (zorluk === 3) {
+        raw = {
+            bilgi: `**Sınav odağı:** “${kelime}” doğrudan tanım ezberiyle değil, yakın başlıklarla ayrımı kurularak çalışılmalı.\n\n**Ayırt ettiren bilgi:** ${baseInfo}\n\n**Karışabilecek başlıklar:** ${n1.term}, ${n2.term}, ${n3.term}.`,
+            soru: `Aşağıda “${kelime}” başlığıyla ilgili bazı yargılar verilmiştir:\n\nI. ${defterShortText(baseInfo, 170)}\nII. “${kelime}” ile “${n1.term}” arasında ayırt edici hiçbir fark yoktur.\nIII. Doğru yorum için yalnızca kısa tanım değil, dönem-tür-bağlam ilişkisi de dikkate alınmalıdır.\n\nBu yargılardan hangileri doğrudur?`,
+            secenekler: ['Yalnız I', 'Yalnız II', 'I ve III', 'II ve III', 'I, II ve III'],
+            dogru: 2,
+            aciklama: `I, kayıtlı temel bilgiyle uyumludur. II, “${n1.term}” ile gereksiz özdeşlik kurduğu için çeldiricidir. III ise AYT’de bağlamla ayırt etme gereğini vurgular.`
+        };
+    } else if (zorluk === 4) {
+        raw = {
+            bilgi: `**Sınav odağı:** “${kelime}” sorularda çoğu zaman yakın kavramlarla birlikte gelir. Bilgi doğru olsa bile yanlış bağlama taşınırsa çeldiriciye dönüşür.\n\n**Temel bilgi:** ${baseInfo}`,
+            soru: `“${kelime}” ile ilgili aşağıdaki yargılardan hangisi söylenemez?`,
+            secenekler: [
+                defterShortText(baseInfo, 145),
+                `Dönem, tür veya bağlam bilgisi “${kelime}”in ayırt edilmesinde etkili olabilir.`,
+                `“${n1.term}” ile karıştırılabilecek yakın bir ayrım noktası oluşturabilir.`,
+                `“${kelime}” ile “${n2.term}” arasında ayırt edici hiçbir fark yoktur.`,
+                `Kısa tanımın yanında örnek veya kullanım alanı da doğru cevaba götürebilir.`
+            ],
+            dogru: 3,
+            aciklama: `Yanlış olan seçenek, “${n2.term}” ile tam özdeşlik kurduğu için aşırı genelleme yapar. AYT’de çeldirici çoğu zaman bu tip yakın ama hatalı eşitlemelerle kurulur.`
+        };
+    } else {
+        raw = {
+            bilgi: `**Sınav odağı:** “${kelime}” artık yalnızca “ne demek?” seviyesinde değil; verilen bilgi doğru mu, yanlış bağlama mı taşınmış, çeldirici hangi yakın başlıkla kurulmuş sorularıyla çalışılmalı.\n\n**Çekirdek bilgi:** ${baseInfo}`,
+            soru: `Bir soru yazarı “${kelime}” başlığını yoklamak isterken seçeneklerde yakın kavramları da kullanmıştır. Buna göre aşağıdakilerden hangisi, doğru bilgi gibi görünmesine rağmen “${kelime}” için en güçlü çeldirici olur?`,
+            secenekler: [
+                `Başlığın temel özelliğini ${defterShortText(baseInfo, 105)} bilgisiyle ilişkilendirmek`,
+                `“${n1.term}”e ait olabilecek bir özelliği bu başlığa taşımak`,
+                `Dönem, tür veya bağlam bilgisini birlikte değerlendirmek`,
+                `Kısa tanımı örnekle destekleyerek okumak`,
+                `Kavramın ayırt edici yönünü komşu başlıklardan ayırmak`
+            ],
+            dogru: 1,
+            aciklama: `En güçlü çeldirici, yakın bir başlığa ait bilgiyi “${kelime}” başlığına taşıyan seçenektir. Bu, bilgi doğru görünse bile bağlamı yanlış olduğu için elenir.`
+        };
+    }
+
+    const shuffled = defterShuffleQuestion(raw, seed, kelime);
+    return {
+        ...shuffled,
+        hata: hataMesaji || undefined,
+        fallback: true,
+        level: zorluk,
+        source: 'yerel',
+        cevaplandi: undefined,
+        yukleniyor: false,
+        notYukleniyor: false,
+        soruYukleniyor: false
+    };
+}
+
+function defterNormalizeAIData(parsed, kelime, action = 'full', existing = {}, seed = Date.now(), level = 3) {
+    if (!parsed || typeof parsed !== 'object') throw new Error('Boş veya geçersiz AI verisi.');
+    const fallback = defterFallbackPekistirme(kelime, '', seed, level);
+    const out = { ...existing };
+
+    if (action !== 'question') {
+        out.bilgi = defterCleanNoteText(parsed.bilgi || fallback.bilgi, kelime);
+    }
+
+    if (action !== 'note') {
+        let secenekler = Array.isArray(parsed.secenekler) ? parsed.secenekler.map(x => defterCleanOption(x, kelime)).filter(Boolean) : [];
+        let dogru = Number(parsed.dogru);
+        if (secenekler.length < 5 || !Number.isInteger(dogru) || dogru < 0 || dogru > 4) {
+            secenekler = fallback.secenekler.slice();
+            dogru = fallback.dogru;
+        }
+
+        let qObj = {
+            soru: String(parsed.soru || fallback.soru),
+            secenekler: secenekler.slice(0, 5),
+            dogru,
+            aciklama: String(parsed.aciklama || fallback.aciklama)
+        };
+
+        if (defterQuestionLooksFlat(qObj.soru, qObj.secenekler)) {
+            qObj = {
+                soru: fallback.soru,
+                secenekler: fallback.secenekler,
+                dogru: fallback.dogru,
+                aciklama: `AI'nin ürettiği soru fazla düz kaldığı için sistem bunu daha eleyici yerel AYT/YDT formuna çevirdi. ${fallback.aciklama}`
+            };
+        } else {
+            qObj = defterShuffleQuestion(qObj, seed, kelime);
+        }
+
+        out.soru = qObj.soru;
+        out.secenekler = qObj.secenekler;
+        out.dogru = qObj.dogru;
+        out.aciklama = qObj.aciklama;
+        out.cevaplandi = undefined;
+    }
+
+    out.hata = undefined;
+    out.level = Math.max(3, Math.min(5, Number(level || 3)));
+    out.source = parsed.source || 'ai';
+    out.yukleniyor = false;
+    out.notYukleniyor = false;
+    out.soruYukleniyor = false;
+    return out;
+}
+
+function openDefter(mod) {
+    defterMod = mod || activeMode || 'edebiyat';
+    defterFiltreli = null;
+    defterSayfaNo = 0;
+    defterSagQIndex = 0;
+    const search = document.getElementById('defter-search');
+    if (search) search.value = '';
+    document.getElementById('defter-modal').style.display = 'flex';
+    defterTabDegistir(defterMod);
+}
+
+function closeDefter(e) {
+    if (e && e.target !== document.getElementById('defter-modal')) return;
+    document.getElementById('defter-modal').style.display = 'none';
+    const list = document.getElementById('defter-quick-list');
+    if (list) list.classList.remove('open');
+}
+
+function defterTabDegistir(mod) {
+    defterMod = mod;
+    defterFiltreli = null;
+    defterSayfaNo = 0;
+    defterSagQIndex = 0;
+    const search = document.getElementById('defter-search');
+    if (search) search.value = '';
+    ['edebiyat','ydt'].forEach(m => {
+        const btn = document.getElementById('dtab-' + m);
+        if (!btn) return;
+        btn.classList.toggle('active', m === mod);
+    });
+    defterRender();
+}
+
+function defterGetirKelimeler() {
+    return defterFiltreli !== null ? defterFiltreli : (appData.savedWords[defterMod] || []);
+}
+
+function defterGetAktifKelime() {
+    const kelimeler = defterGetirKelimeler();
+    if (!kelimeler.length) return null;
+    defterSayfaNo = Math.max(0, Math.min(defterSayfaNo, kelimeler.length - 1));
+    return kelimeler[defterSayfaNo];
+}
+
+function defterArama(q) {
+    const kelimeler = appData.savedWords[defterMod] || [];
+    if (!q.trim()) {
+        defterFiltreli = null;
+        defterSayfaNo = 0;
+        defterSagQIndex = 0;
+        defterRender();
+        return;
+    }
+    const q2 = defterNormalize(q);
+    defterFiltreli = kelimeler.filter(k => {
+        const nk = defterNormalize(k);
+        const anlam = defterNormalize(defterGetirAnlam(k, true) || '');
+        return nk.includes(q2) || defterFuzzy(k, q2) || anlam.includes(q2) || defterFuzzy(anlam, q2);
+    });
+    defterSayfaNo = 0;
+    defterSagQIndex = 0;
+    defterRender();
+}
+
+function defterToggleKelimeler(e) {
+    if (e) e.stopPropagation();
+    const list = document.getElementById('defter-quick-list');
+    if (!list) return;
+    defterRenderQuickList();
+    list.classList.toggle('open');
+}
+
+document.addEventListener('click', (e) => {
+    const list = document.getElementById('defter-quick-list');
+    const wrap = document.querySelector('.defter-quick-wrap');
+    if (list && wrap && !wrap.contains(e.target)) list.classList.remove('open');
+});
+
+document.addEventListener('keydown', (e) => {
+    const modal = document.getElementById('defter-modal');
+    if (!modal || modal.style.display !== 'flex') return;
+    const tag = (document.activeElement?.tagName || '').toLowerCase();
+    const isTyping = tag === 'input' || tag === 'textarea' || document.activeElement?.isContentEditable;
+
+    if (e.key === 'Escape') {
+        const list = document.getElementById('defter-quick-list');
+        if (list?.classList.contains('open')) { list.classList.remove('open'); e.preventDefault(); return; }
+        closeDefter();
+    }
+    if (isTyping) return;
+    if (e.key === 'ArrowLeft') { defterOnceki(); e.preventDefault(); }
+    if (e.key === 'ArrowRight') { defterSonraki(); e.preventDefault(); }
+    if (e.key === '/') {
+        const search = document.getElementById('defter-search');
+        if (search) { search.focus(); e.preventDefault(); }
+    }
+});
+
+function defterRenderQuickList() {
+    const list = document.getElementById('defter-quick-list');
+    if (!list) return;
+    const kelimeler = defterGetirKelimeler();
+    if (!kelimeler.length) {
+        list.innerHTML = '<div class="dsk-loading">Gösterilecek kelime yok.</div>';
+        return;
+    }
+    list.innerHTML = `<div class="defter-quick-help">Kelimeler arasında hızlı atla. Kısayol: <span class="defter-kbd">←</span> <span class="defter-kbd">→</span>, arama için <span class="defter-kbd">/</span></div>` + kelimeler.map((kelime, idx) => {
+        const active = idx === defterSayfaNo ? ' active' : '';
+        return `<button type="button" class="defter-quick-item${active}" onclick="event.stopPropagation(); defterKelimeyeGit(${idx})">
+            <span>${defterEscapeHTML(kelime)}</span><small>${idx + 1}</small>
+        </button>`;
+    }).join('');
+}
+
+function defterKelimeyeGit(idx) {
+    const kelimeler = defterGetirKelimeler();
+    if (!kelimeler.length) return;
+    defterSayfaNo = Math.max(0, Math.min(idx, kelimeler.length - 1));
+    defterSagQIndex = 0;
+    const list = document.getElementById('defter-quick-list');
+    if (list) list.classList.remove('open');
+    defterRender();
+}
+
+function defterRender() {
+    const kelimeler = defterGetirKelimeler();
+    const bos = document.getElementById('defter-bos');
+    const icerik = document.getElementById('defter-icerik');
+    const nav = document.getElementById('defter-nav');
+    const sayac = document.getElementById('defter-sayac');
+    const quickCurrent = document.getElementById('defter-quick-current');
+
+    if (sayac) sayac.textContent = `${kelimeler.length} kelime`;
+
+    if (kelimeler.length === 0) {
+        if (bos) bos.style.display = 'flex';
+        if (icerik) icerik.style.display = 'none';
+        if (nav) nav.style.display = 'none';
+        if (quickCurrent) quickCurrent.textContent = '0/0';
+        defterRenderQuickList();
+        return;
+    }
+
+    if (bos) bos.style.display = 'none';
+    if (icerik) icerik.style.display = 'block';
+    if (nav) nav.style.display = 'grid';
+
+    defterSayfaNo = Math.max(0, Math.min(defterSayfaNo, kelimeler.length - 1));
+    const kelime = kelimeler[defterSayfaNo];
+
+    document.getElementById('defter-sayfa').innerHTML = defterTamSayfaHTML(kelime);
+
+    const pct = kelimeler.length <= 1 ? 100 : ((defterSayfaNo + 1) / kelimeler.length) * 100;
+    document.getElementById('defter-sayfa-no').innerHTML = `
+        <div>Kelime ${defterSayfaNo + 1} / ${kelimeler.length}</div>
+        <div class="defter-progress"><div class="defter-progress-bar" style="width:${pct}%"></div></div>
+    `;
+    if (quickCurrent) quickCurrent.textContent = `${defterSayfaNo + 1}/${kelimeler.length}`;
+
+    const prev = document.getElementById('defter-prev');
+    const next = document.getElementById('defter-next');
+    if (prev) prev.disabled = defterSayfaNo === 0;
+    if (next) next.disabled = defterSayfaNo >= kelimeler.length - 1;
+
+    defterRenderQuickList();
+    setTimeout(() => defterEnsurePekistirme(kelime), 0);
+}
+
+function defterTamSayfaHTML(kelime) {
+    const anlam = defterGetirAnlam(kelime);
+    const key = defterAIKey(kelime);
+    const data = defterSagSorular[key];
+    const localMeaning = anlam || '<i style="color:#888">Sözlükte kayıtlı anlam bulunamadı. AI notu otomatik hazırlanacak.</i>';
+
+    let aiInfoHTML = '<div class="dsk-loading"><span class="blink-cursor">▌</span> AI çalışma notu hazırlanıyor…</div>';
+    if (data && data.notYukleniyor) aiInfoHTML = '<div class="dsk-loading"><span class="blink-cursor">▌</span> Not yenileniyor…</div>';
+    else if (data && !data.yukleniyor && data.bilgi) aiInfoHTML = defterFormatAI(defterCleanNoteText(data.bilgi, kelime));
+    if (data && data.hata) aiInfoHTML = `<div class="defter-error-note">${defterEscapeHTML(data.hata)}</div>` + aiInfoHTML;
+
+    return `
+    <div class="defter-study-grid">
+      <section class="defter-word-panel">
+        <div class="defter-word-kicker">${defterMod === 'ydt' ? '🇬🇧 YDT kelime' : '📚 AYT Edebiyat kavramı'} <span>• tam ekran tek kelime</span></div>
+        <h1 class="defter-word-title">${defterEscapeHTML(kelime)}</h1>
+
+        <div class="defter-local-meaning">
+          <div class="defter-section-title">📌 Kayıtlı anlam / temel bilgi</div>
+          <div>${localMeaning}</div>
+        </div>
+
+        <div class="defter-ai-info">
+          <div class="defter-section-title">✨ AI tarafından hazırlanmış çalışma notu</div>
+          <div>${aiInfoHTML}</div>
+        </div>
+
+        <div class="defter-mini-actions">
+          <button type="button" class="defter-mini-btn primary" onclick="defterYenileNot(${defterJSString(kelime)})">✨ Notu yenile</button>
+          <button type="button" class="defter-mini-btn primary" onclick="defterYeniSoru(${defterJSString(kelime)})">🎯 Soruyu yenile</button>
+          <button type="button" class="defter-mini-btn" onclick="defterTumunuYenile(${defterJSString(kelime)})">🔄 Not + soru yenile</button>
+          <button type="button" class="defter-mini-btn danger" onclick="defterKelimeSil(${defterJSString(kelime)})">🗑️ Kelimeyi sil</button>
+        </div>
+        <div class="defter-quality-note">Kısayollar: <span class="defter-kbd">←</span> önceki, <span class="defter-kbd">→</span> sonraki, <span class="defter-kbd">/</span> arama. AI soru, resmi ÖSYM sorusu değildir; ama AYT/YDT’deki ayırt edici çeldirici mantığına yakın biçimde üretilir.</div>
+      </section>
+
+      <aside class="defter-test-panel">
+        <div class="defter-test-head">
+          <div>
+            <div class="defter-test-title">🤖 AI ile Pekiştir Testi</div>
+            <div class="defter-small-muted">Tanım sorma seviyesini aşacak şekilde; öncüllü, bağlamlı ve yakın çeldiricili soru üretir.</div>
+          </div>
+          <span class="defter-osym-badge">ÖSYM tarzı • sert/eleyici</span>
+        </div>
+        <div id="defter-test-body">${defterSoruHTML(kelime)}</div>
+      </aside>
+    </div>`;
+}
+
+function defterSoruHTML(kelime) {
+    const key = defterAIKey(kelime);
+    const data = defterSagSorular[key];
+    const archiveHTML = defterSoruArsivHTML(kelime);
+
+    if (!data || data.yukleniyor || data.soruYukleniyor || !data.soru) {
+        const loading = data?.soruYukleniyor ? 'Soru yenileniyor…' : 'Eleyici pekiştirme sorusu hazırlanıyor…';
+        return `<div class="dsk-loading"><span class="blink-cursor">▌</span> ${loading}</div>
+        <button type="button" class="dsk-yeni-soru-btn" onclick="defterYeniSoru(${defterJSString(kelime)})">🔄 Soru yenile</button>${archiveHTML}`;
+    }
+
+    const secenekler = Array.isArray(data.secenekler) ? data.secenekler : [];
+    const level = Math.max(3, Math.min(5, Number(data.level || defterGetLevel(kelime))));
+    const source = data.source === 'yerel' || data.fallback ? 'yerel yedek' : 'AI üretimi';
+    let soruHTML = data.hata ? `<div class="defter-error-note">${defterEscapeHTML(data.hata)}</div>` : '';
+    soruHTML += `<div class="defter-question-meta"><span class="defter-level-pill">Zorluk ${level}/5</span><span class="defter-source-pill">${source}</span><span class="defter-source-pill">Arşive kaydedildi</span></div>`;
+    soruHTML += `<div class="dsk-soru-text">${defterFormatAI(data.soru || 'Soru hazırlanamadı.')}</div>`;
+
+    secenekler.forEach((secenek, idx) => {
+        const harf = ['A','B','C','D','E'][idx] || String(idx + 1);
+        let cls = 'dsk-option';
+        let extra = '';
+        if (data.cevaplandi !== undefined) {
+            if (idx === data.cevaplandi) cls += ' secilen';
+            if (idx === data.dogru) cls += ' dogru';
+            else if (idx === data.cevaplandi) cls += ' yanlis';
+            extra = 'disabled';
+        }
+        soruHTML += `<button type="button" class="${cls}" ${extra} onclick="defterCevapla(${defterJSString(kelime)}, ${idx})">${harf}) ${defterEscapeHTML(defterCleanOption(secenek, kelime))}</button>`;
+    });
+
+    if (data.cevaplandi !== undefined) {
+        const isCorrect = data.cevaplandi === data.dogru;
+        const dogruHarf = ['A','B','C','D','E'][data.dogru] || '?';
+        soruHTML += `<div class="dsk-feedback ${isCorrect ? 'ok' : 'no'}">
+            ${isCorrect ? '🎉 Doğru.' : '❌ Yanlış. Doğru cevap: ' + dogruHarf + ')'}
+            ${data.aciklama ? `<br><span style="font-weight:650;">${defterFormatAI(data.aciklama)}</span>` : ''}
+        </div>`;
+    }
+
+    soruHTML += `<div class="defter-action-row">
+        <button type="button" class="dsk-yeni-soru-btn" onclick="defterYeniSoru(${defterJSString(kelime)})">🔄 Yeni soru üret — zorluk artar</button>
+        <button type="button" class="dsk-yeni-soru-btn" onclick="defterArsiviAc(${defterJSString(kelime)})">📚 Kayıtlı soruları göster</button>
+    </div>`;
+    soruHTML += archiveHTML;
+    return soruHTML;
+}
+
+function defterSoruArsivHTML(kelime) {
+    const arsiv = defterArchive(kelime).questions || [];
+    if (!arsiv.length) return `<details class="defter-history"><summary>📚 Kayıtlı sorular (0)</summary><div class="defter-small-muted" style="margin-top:10px;">Bu kelime için üretilen sorular burada birikecek.</div></details>`;
+    const activeQid = defterSagSorular[defterAIKey(kelime)]?.qid;
+    const rows = arsiv.map((q, idx) => {
+        const active = q.id === activeQid ? ' active' : '';
+        const tarih = q.createdAt ? new Date(q.createdAt).toLocaleDateString('tr-TR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
+        let result = 'çözülmedi';
+        let rCls = '';
+        if (q.cevaplandi !== undefined) {
+            result = q.correct ? 'doğru' : 'yanlış';
+            rCls = q.correct ? ' ok' : ' no';
+        }
+        return `<button type="button" class="defter-history-item${active}" onclick="defterArsivdenAc(${defterJSString(kelime)}, ${defterJSString(q.id)})">
+            <span class="defter-history-top"><span>#${arsiv.length - idx} • Zorluk ${q.level || 3}/5</span><span>${defterEscapeHTML(tarih)}</span></span>
+            <span class="defter-history-q">${defterEscapeHTML(defterShortText(q.soru, 145))}</span>
+            <span class="defter-history-result${rCls}">${result}</span>
+        </button>`;
+    }).join('');
+    return `<details class="defter-history" id="defter-history-box"><summary>📚 Kayıtlı sorular (${arsiv.length}) — eski soruya dokunup tekrar aç</summary><div class="defter-history-list">${rows}</div></details>`;
+}
+
+function defterArsiviAc(kelime) {
+    const box = document.getElementById('defter-history-box');
+    if (box) {
+        box.open = true;
+        box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+function defterArsivdenAc(kelime, qid) {
+    const q = (defterArchive(kelime).questions || []).find(x => x.id === qid);
+    if (!q) return;
+    defterSagSorular[defterAIKey(kelime)] = {
+        qid: q.id,
+        soru: q.soru,
+        secenekler: (q.secenekler || []).slice().map(x => defterCleanOption(x, kelime)),
+        dogru: Number(q.dogru || 0),
+        aciklama: q.aciklama || '',
+        cevaplandi: q.cevaplandi,
+        level: q.level || defterGetLevel(kelime),
+        source: q.source || 'ai',
+        bilgi: defterSagSorular[defterAIKey(kelime)]?.bilgi || appData.aiCache?.[defterCacheKey(kelime)]?.bilgi || '',
+        yukleniyor: false,
+        notYukleniyor: false,
+        soruYukleniyor: false
+    };
+    defterSagGuncelle(kelime);
+}
+
+function defterFormatAI(text) {
+    return defterEscapeHTML(text)
+        .replace(/\n/g, '<br>')
+        .replace(/\*\*(.*?)\*\*/g, '<b style="color:var(--gold);">$1</b>')
+        .replace(/`([^`]+)`/g, '<b style="color:#e1bee7;">$1</b>');
+}
+
+function defterGetBestStoredNote(kelime) {
+    ensureDefterStores();
+    const key = defterAIKey(kelime);
+    const live = defterSagSorular[key]?.bilgi;
+    if (live) return defterCleanNoteText(live, kelime);
+
+    const cached = appData.aiCache?.[defterCacheKey(kelime)];
+    if (cached?.bilgi) return defterCleanNoteText(cached.bilgi, kelime);
+
+    const a = defterArchive(kelime);
+    const hist = Array.isArray(a.noteHistory) && a.noteHistory.length ? a.noteHistory[0].bilgi : '';
+    if (hist) return defterCleanNoteText(hist, kelime);
+
+    return defterBuildStoredInfo(kelime);
+}
+
+function defterGetLatestStoredQuestion(kelime) {
+    const qs = defterArchive(kelime).questions || [];
+    return qs.length ? qs[0] : null;
+}
+
+function defterHydrateFromStored(kelime) {
+    const key = defterAIKey(kelime);
+    const existing = defterSagSorular[key] || {};
+    const note = defterGetBestStoredNote(kelime);
+    const q = defterGetLatestStoredQuestion(kelime);
+    if (!note && !q) return false;
+
+    const hydrated = {
+        ...existing,
+        bilgi: note || existing.bilgi || '',
+        yukleniyor: false,
+        notYukleniyor: false,
+        soruYukleniyor: false
+    };
+
+    if (q) {
+        hydrated.qid = q.id;
+        hydrated.soru = q.soru;
+        hydrated.secenekler = (q.secenekler || []).slice().map(x => defterCleanOption(x, kelime));
+        hydrated.dogru = Number(q.dogru || 0);
+        hydrated.aciklama = q.aciklama || '';
+        hydrated.cevaplandi = q.cevaplandi;
+        hydrated.level = q.level || defterGetLevel(kelime);
+        hydrated.source = q.source || 'ai';
+    }
+
+    defterSagSorular[key] = hydrated;
+    return true;
+}
+
+function defterEnsurePekistirme(kelime) {
+    const key = defterAIKey(kelime);
+    if (!kelime) return;
+
+    // Önce kayıtlı not/soru arşivini kullan. Böylece Defter'e test ekranından dönünce
+    // aynı kavram için AI bilgi notu yeniden üretilmez; token boşa gitmez.
+    const hydrated = defterHydrateFromStored(kelime);
+    if (defterSagSorular[key]?.soru && defterSagSorular[key]?.bilgi) {
+        defterSagGuncelle(kelime);
+        return;
+    }
+
+    const cached = appData.aiCache?.[defterCacheKey(kelime)];
+    if (cached && cached.soru && cached.bilgi) {
+        defterSagSorular[key] = { ...cached, bilgi: defterCleanNoteText(cached.bilgi, kelime), secenekler: (cached.secenekler || []).map(x => defterCleanOption(x, kelime)) };
+        defterSagGuncelle(kelime);
+        return;
+    }
+
+    if (hydrated && defterSagSorular[key]?.bilgi && !defterSagSorular[key]?.soru) {
+        defterSagGuncelle(kelime);
+        defterSagPekistir(kelime, { action: 'question', force: false });
+        return;
+    }
+
+    defterSagPekistir(kelime, { action: 'full', force: false });
+}
+
+function defterExtractJSON(raw) {
+    const clean = String(raw || '').replace(/```json|```/gi, '').trim();
+    try { return JSON.parse(clean); } catch (_) {}
+    const first = clean.indexOf('{');
+    const last = clean.lastIndexOf('}');
+    if (first !== -1 && last !== -1 && last > first) {
+        return JSON.parse(clean.slice(first, last + 1));
+    }
+    throw new Error('AI yanıtı JSON formatında gelmedi.');
+}
+
+async function defterFetchAIJSON(prompt) {
+    const res = await fetch(WORKER_BASE + "/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, tier: 'smart' })
+    });
+
+    const text = await res.text();
+    if (!res.ok) throw new Error(`API ${res.status}: ${text.slice(0, 140)}`);
+
+    let raw = text;
+    try {
+        const json = JSON.parse(text);
+        raw = (json.choices?.[0]?.message?.content || json.content || json.text || json.answer || '').trim();
+        if (!raw && typeof json === 'object') raw = JSON.stringify(json);
+    } catch (_) {
+        raw = text;
+    }
+    return defterExtractJSON(raw);
+}
+
+function defterBuildPrompt(kelime, action, seed, level = 3) {
+    const anlam = defterGetirAnlam(kelime, true) || '';
+    const isYdt = defterMod === 'ydt';
+    const mode = isYdt ? 'YDT' : 'AYT EDEBİYAT';
+    const zorluk = Math.max(3, Math.min(5, Number(level || 3)));
+    const schema = action === 'note'
+        ? '{"bilgi":"..."}'
+        : action === 'question'
+            ? '{"soru":"...","secenekler":["...","...","...","...","..."],"dogru":0,"aciklama":"..."}'
+            : '{"bilgi":"...","soru":"...","secenekler":["...","...","...","...","..."],"dogru":0,"aciklama":"..."}';
+
+    const naturalRules = `
+Doğallık kuralları:
+- Soru kökünde "ÖSYM tarzı", "ölçme mantığı", "sert/eleyici", "deneme" gibi yapay etiketler kullanma.
+- Soru gerçek bir sınav sorusu gibi doğal dursun; meta açıklama yapma.
+- Şıklarda "Bu başlık", "Bu kavram", "tamamen aynıdır" gibi robotik kalıplar kullanma; doğrudan kavram/sanatçı/eser adını kullan.
+- Çeldiriciler bariz komik/uydurma olmasın; yakın, makul ama yanlış olsun.
+- Doğru cevabı soru kökünde doğrudan ele verme.
+- Şıkların uzunlukları birbirine yakın olsun; doğru şık belirgin biçimde uzun/kısa kalmasın.`;
+
+    const ortakKurallar = isYdt ? `
+YDT soru kalitesi:
+- Direkt "kelimenin anlamı nedir" diye sorma.
+- Bağlamlı cümle veya kısa paragraf içinde anlam yokla.
+- Beş seçenek aynı sözcük türünden ve yakın çeldirici olsun.
+- Zorluk ${zorluk}/5: ${zorluk === 3 ? 'bağlamdan anlam çıkarma' : zorluk === 4 ? 'yakın anlamlı çeldirici + bağlam yönü' : 'akademik bağlam, ince anlam farkı ve güçlü çeldirici'}.
+- Doğru seçenek rastgele konumda olsun; dogru alanı 0-tabanlı indeks olsun.` : `
+AYT Edebiyat soru kalitesi:
+- Direkt "nedir?" / "tanımı hangisidir?" düzlüğüne düşme.
+- Zorluk ${zorluk}/5: ${zorluk === 3 ? 'temel bilgi + yakın kavram ayrımı' : zorluk === 4 ? 'öncüllü/olumsuz kök + makul çeldirici' : 'yorum gerektiren bağlam + dönem/tür/sanatçı ilişkisi + güçlü çeldirici'}.
+- En az birini kullan: öncüllü soru, "hangisi söylenemez", dönem-tür-sanatçı ilişkisi, yakın kavram karıştırma, ayırt edici özellik yoklama.
+- Eser/sanatçı/kavram adları gerçekçi ve müfredat uyumlu olsun; emin değilsen daha genel ama sağlam kur.
+- Beş seçenek olsun, doğru seçenek rastgele konumda olsun; dogru alanı 0-tabanlı indeks olsun.`;
+
+    return `MOD:${mode}\nMOD:DEFTER_TEK_KELIME_AI_CALISMA\nISTEK:${action}\nKELIME:${kelime}\nKAYITLI_BILGI:${anlam}\nZORLUK:${zorluk}/5\nSEED:${seed}\n\nGörev:\n${action === 'note' ? 'Bu kelime/kavram için sınav odaklı, kısa ama ayırt ettirici bir çalışma notu yaz. Bilgi alanına kesinlikle soru, şık, cevap anahtarı veya test metni koyma.' : action === 'question' ? 'Bu kelime/kavramla ilgili 5 şıklı, doğal ve ayırt edici bir pekiştirme sorusu üret.' : 'Bu kelime/kavram için önce sınav odaklı çalışma notu yaz, sonra 5 şıklı doğal ve ayırt edici bir pekiştirme sorusu üret.'}\n${ortakKurallar}\n${naturalRules}\n\nYanıt SADECE geçerli JSON olsun. Markdown kod bloğu, açıklama veya fazladan metin yazma.\nJSON şeması:\n${schema}`;
+}
+
+async function defterSagPekistir(kelime, options = {}) {
+    const opts = typeof options === 'boolean' ? { force: options, action: 'full' } : (options || {});
+    const action = opts.action || opts.part || 'full';
+    const force = !!opts.force;
+    const level = Math.max(3, Math.min(5, Number(opts.level || defterGetLevel(kelime))));
+    const seed = force ? `${Date.now()}|L${level}|${Math.random().toString(36).slice(2, 7)}` : `ilk|L${level}`;
+    const key = defterAIKey(kelime);
+    const existing = defterSagSorular[key] || {};
+
+    defterSagSorular[key] = {
+        ...existing,
+        level,
+        yukleniyor: action === 'full' && (!existing.bilgi || !existing.soru),
+        notYukleniyor: action !== 'question',
+        soruYukleniyor: action !== 'note',
+        hata: undefined
+    };
+    defterSagGuncelle(kelime);
+
+    try {
+        const prompt = defterBuildPrompt(kelime, action, seed, level);
+        const parsed = await defterFetchAIJSON(prompt);
+        const normalized = defterNormalizeAIData(parsed, kelime, action, existing, seed, level);
+        defterSagSorular[key] = normalized;
+
+        if (action !== 'question' && normalized.bilgi) defterPersistNote(kelime, normalized.bilgi, level);
+        if (action !== 'note' && normalized.soru) defterPersistQuestion(kelime, normalized, { level, source: 'ai' });
+
+        if (action === 'full' && !force) {
+            appData.aiCache[defterCacheKey(kelime)] = normalized;
+            saveLocal();
+        }
+    } catch(e) {
+        const fallback = defterFallbackPekistirme(kelime, `AI üretimi aksadı; sistem geçici olarak yerel soruya geçti. Ayrıntı: ${e.message}`, seed, level);
+        const merged = { ...existing };
+        if (action !== 'question') merged.bilgi = fallback.bilgi;
+        if (action !== 'note') {
+            merged.soru = fallback.soru;
+            merged.secenekler = fallback.secenekler;
+            merged.dogru = fallback.dogru;
+            merged.aciklama = fallback.aciklama;
+            merged.cevaplandi = undefined;
+        }
+        merged.hata = fallback.hata;
+        merged.fallback = true;
+        merged.level = level;
+        merged.source = 'yerel';
+        merged.yukleniyor = false;
+        merged.notYukleniyor = false;
+        merged.soruYukleniyor = false;
+        defterSagSorular[key] = merged;
+        if (action !== 'question' && merged.bilgi) defterPersistNote(kelime, merged.bilgi, level);
+        if (action !== 'note' && merged.soru) defterPersistQuestion(kelime, merged, { level, source: 'yerel' });
+    }
+    defterSagGuncelle(kelime);
+}
+
+async function defterYenileNot(kelime) {
+    await defterSagPekistir(kelime, { action: 'note', force: true });
+}
+
+async function defterYeniSoru(kelime) {
+    const level = defterBumpLevel(kelime);
+    await defterSagPekistir(kelime, { action: 'question', force: true, level });
+}
+
+async function defterTumunuYenile(kelime) {
+    const level = defterBumpLevel(kelime);
+    await defterSagPekistir(kelime, { action: 'full', force: true, level });
+}
+
+function defterCevapla(kelime, idx) {
+    const key = defterAIKey(kelime);
+    const s = defterSagSorular[key];
+    if (!s || s.cevaplandi !== undefined) return;
+    s.cevaplandi = idx;
+    const arsiv = defterArchive(kelime).questions || [];
+    const q = arsiv.find(x => x.id === s.qid);
+    if (q) {
+        q.cevaplandi = idx;
+        q.correct = idx === Number(s.dogru || 0);
+        q.answeredAt = Date.now();
+        saveLocal();
+    }
+    defterSagGuncelle(kelime);
+}
+
+function defterSagGuncelle(kelime) {
+    const aktif = defterGetAktifKelime();
+    if (!aktif || String(aktif) !== String(kelime)) return;
+    const body = document.getElementById('defter-test-body');
+    if (body) body.innerHTML = defterSoruHTML(kelime);
+
+    const page = document.getElementById('defter-sayfa');
+    if (!page) return;
+    const infoBox = page.querySelector('.defter-ai-info > div:last-child');
+    const data = defterSagSorular[defterAIKey(kelime)];
+    if (infoBox) {
+        if (!data || data.notYukleniyor || (data.yukleniyor && !data.bilgi)) {
+            infoBox.innerHTML = '<div class="dsk-loading"><span class="blink-cursor">▌</span> AI çalışma notu hazırlanıyor…</div>';
+        } else {
+            let html = data.hata ? `<div class="defter-error-note">${defterEscapeHTML(data.hata)}</div>` : '';
+            html += defterFormatAI(defterCleanNoteText(data.bilgi || 'AI notu hazırlanamadı.', kelime));
+            infoBox.innerHTML = html;
+        }
+    }
+}
+
+function defterGetirAnlam(kelime, plain = false) {
+    const d = defterDict();
+    let m = d[kelime];
+    if (!m) {
+        const found = defterFindDictKey(kelime);
+        if (found) m = d[found];
+    }
+    if (!m) return null;
+    let html = '';
+    if (typeof m === 'object') html = `<b>${m.m}</b> — ${m.f}${m.e ? `<br><i style="color:var(--accent);">${m.e}</i>` : ''}`;
+    else html = String(m);
+    if (!plain) return html;
+    return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function defterKelimeSil(kelime) {
+    if (!confirm(`"${kelime}" kelimesini defterden sil?`)) return;
+    appData.savedWords[defterMod] = (appData.savedWords[defterMod] || []).filter(x => x !== kelime);
+    delete defterSagSorular[defterAIKey(kelime)];
+    if (defterFiltreli) defterFiltreli = defterFiltreli.filter(x => x !== kelime);
+    saveLocal();
+    renderNotebook();
+    const kalan = defterGetirKelimeler().length;
+    if (kalan === 0) { defterSayfaNo = 0; defterRender(); return; }
+    if (defterSayfaNo >= kalan) defterSayfaNo = kalan - 1;
+    defterRender();
+}
+
+function defterOnceki() {
+    if (defterSayfaNo > 0) {
+        defterSayfaNo--;
+        defterSagQIndex = 0;
+        defterRender();
+    }
+}
+
+function defterSonraki() {
+    const kelimeler = defterGetirKelimeler();
+    if (defterSayfaNo < kelimeler.length - 1) {
+        defterSayfaNo++;
+        defterSagQIndex = 0;
+        defterRender();
+    }
+}
+
 
 // ── AI STREAMING YARDIMCI (Cloudflare Worker, Önbellekli) ───────────────────
 const WORKER_URL = WORKER_BASE + "/";
