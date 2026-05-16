@@ -2095,8 +2095,10 @@ async function streamAI(prompt, targetEl, prefix, cacheKey) {
         const cursor = targetEl.querySelector('.blink-cursor');
         if (cursor) cursor.remove();
 
-        // 2. Sonucu cache'e kaydet
-        if (storageKey) {
+        // =========================================================================
+        // ⚡ GÜNCEL HAFIZA DUVARI: Sadece normal sohbetleri önbelleğe kaydet
+        // =========================================================================
+        if (storageKey && !json.isQuiz) {
             const finalHTML = displayed
                 .replace(/\n/g, '<br>')
                 .replace(/\*\*(.*?)\*\*/g, '<b style="color:var(--gold);">$1</b>')
@@ -2105,13 +2107,15 @@ async function streamAI(prompt, targetEl, prefix, cacheKey) {
             if (keys.length >= 400) delete appData.aiCache[keys[0]];
             appData.aiCache[storageKey] = finalHTML;
             saveLocal();
+            console.log("Normal sohbet cache'e kaydedildi. 💾");
+        } else if (json.isQuiz) {
+            console.log("Soru çözme modu: Hafızanın şişmemesi için cache pas geçildi. ⛔");
         }
 
     } catch(e) {
         targetEl.innerHTML = "<b style='color:var(--wrong);'>Bağlantı hatası: " + e.message + "</b>";
     }
 }
-
 // ── AI SÖZLÜK — DOĞAL DİL ANLAYAN SOHBET MODU ────────────────────
 async function searchAiDictionary() {
     const input = document.getElementById('ai-search-input').value.trim();
