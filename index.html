@@ -646,6 +646,131 @@
   .defter-nav-btn { min-height:48px; font-size:0.94rem; }
 }
 
+
+
+/* ── MOBİL DEFTER SON DOKUNUŞ: rahat kaydırma + alt buton güvenliği ── */
+#defter-modal.modal {
+  overflow: hidden;
+}
+.defter-main {
+  scroll-behavior: smooth;
+  overscroll-behavior-y: contain;
+}
+
+@media (max-width: 900px) {
+  #defter-modal.modal {
+    height: 100svh;
+    max-height: 100svh;
+    overflow: hidden !important;
+    touch-action: none;
+  }
+  .defter-shell {
+    height: 100svh !important;
+    max-height: 100svh !important;
+    min-height: 0;
+    overflow: hidden !important;
+  }
+  .defter-topbar {
+    flex: 0 0 auto;
+  }
+  .defter-main {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overscroll-behavior-y: contain;
+    padding-bottom: calc(118px + env(safe-area-inset-bottom, 0px)) !important;
+    scroll-padding-bottom: calc(145px + env(safe-area-inset-bottom, 0px));
+  }
+  #defter-icerik,
+  #defter-sayfa {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  .defter-study-grid {
+    height: auto !important;
+    min-height: 0 !important;
+    padding-bottom: 26px;
+  }
+  .defter-word-panel,
+  .defter-test-panel {
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    -webkit-overflow-scrolling: auto;
+    touch-action: pan-y;
+  }
+  .defter-test-panel {
+    display: block;
+  }
+  .dsk-yeni-soru-btn {
+    margin-top: 10px;
+    width: 100%;
+    min-height: 50px;
+  }
+  .defter-action-row,
+  .dsk-feedback,
+  .defter-history,
+  .defter-mini-actions {
+    scroll-margin-bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+  }
+  .defter-history {
+    margin-bottom: 34px;
+  }
+  .defter-history-list {
+    max-height: none;
+    overflow-y: visible;
+  }
+  .defter-bottom-nav {
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 80;
+    box-shadow: 0 -12px 26px rgba(0,0,0,0.42);
+  }
+  .defter-nav-btn,
+  .defter-mini-btn,
+  .dsk-option,
+  .dsk-yeni-soru-btn,
+  .defter-tab-btn,
+  .defter-quick-btn,
+  .defter-quick-item {
+    touch-action: manipulation;
+  }
+}
+
+@media (max-width: 560px) {
+  .defter-main {
+    padding-bottom: calc(132px + env(safe-area-inset-bottom, 0px)) !important;
+    scroll-padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px));
+  }
+  .defter-bottom-nav {
+    padding-bottom: max(14px, env(safe-area-inset-bottom, 0px));
+  }
+  .defter-history {
+    margin-bottom: 48px;
+  }
+}
+
+
+
+/* v6: soru üretimi isteğe bağlı, mobil dostu boş durum */
+.defter-question-idle {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:10px; text-align:center; min-height:180px; padding:24px 18px;
+  border:1px dashed rgba(255,215,0,0.28); border-radius:16px;
+  background:rgba(255,215,0,0.045); color:#ddd; line-height:1.55;
+}
+.defter-question-idle b { color:var(--gold); font-size:1.02rem; }
+.defter-question-idle span { color:#b8b8c4; font-size:.92rem; max-width:420px; }
+.defter-idle-icon { font-size:2.3rem; filter:drop-shadow(0 0 10px rgba(255,215,0,.25)); }
+.dsk-yeni-soru-btn:disabled { filter:none !important; transform:none !important; }
+@media (max-width: 900px) {
+  .defter-question-idle { min-height:145px; padding:18px 14px; }
+  .defter-idle-icon { font-size:2rem; }
+}
+
 </style>
 </head>
 <body>
@@ -3371,6 +3496,35 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+
+function defterScrollContainer() {
+    return document.getElementById('defter-icerik');
+}
+
+function defterIsMobileLayout() {
+    return window.matchMedia && window.matchMedia('(max-width: 900px)').matches;
+}
+
+function defterMobileResetScroll() {
+    if (!defterIsMobileLayout()) return;
+    const c = defterScrollContainer();
+    if (!c) return;
+    requestAnimationFrame(() => c.scrollTo({ top: 0, behavior: 'auto' }));
+}
+
+function defterMobileScrollIntoView(selector, behavior = 'smooth') {
+    if (!defterIsMobileLayout()) return;
+    window.setTimeout(() => {
+        const c = defterScrollContainer();
+        const el = document.querySelector(selector);
+        if (!c || !el) return;
+        const cRect = c.getBoundingClientRect();
+        const eRect = el.getBoundingClientRect();
+        const target = c.scrollTop + (eRect.top - cRect.top) - 16;
+        c.scrollTo({ top: Math.max(0, target), behavior });
+    }, 80);
+}
+
 function defterRenderQuickList() {
     const list = document.getElementById('defter-quick-list');
     if (!list) return;
@@ -3438,6 +3592,7 @@ function defterRender() {
     if (next) next.disabled = defterSayfaNo >= kelimeler.length - 1;
 
     defterRenderQuickList();
+    defterMobileResetScroll();
     setTimeout(() => defterEnsurePekistirme(kelime), 0);
 }
 
@@ -3470,7 +3625,7 @@ function defterTamSayfaHTML(kelime) {
 
         <div class="defter-mini-actions">
           <button type="button" class="defter-mini-btn primary" onclick="defterYenileNot(${defterJSString(kelime)})">✨ Notu yenile</button>
-          <button type="button" class="defter-mini-btn primary" onclick="defterYeniSoru(${defterJSString(kelime)})">🎯 Soruyu yenile</button>
+          <button type="button" class="defter-mini-btn primary" onclick="defterYeniSoru(${defterJSString(kelime)})">🎯 Soru üret / yenile</button>
           <button type="button" class="defter-mini-btn" onclick="defterTumunuYenile(${defterJSString(kelime)})">🔄 Not + soru yenile</button>
           <button type="button" class="defter-mini-btn danger" onclick="defterKelimeSil(${defterJSString(kelime)})">🗑️ Kelimeyi sil</button>
         </div>
@@ -3481,7 +3636,7 @@ function defterTamSayfaHTML(kelime) {
         <div class="defter-test-head">
           <div>
             <div class="defter-test-title">🤖 AI ile Pekiştir Testi</div>
-            <div class="defter-small-muted">Tanım sorma seviyesini aşacak şekilde; öncüllü, bağlamlı ve yakın çeldiricili soru üretir.</div>
+            <div class="defter-small-muted">Sadece sen başlatınca soru üretir; böylece yalnızca anlam çalışırken token harcanmaz.</div>
           </div>
           <span class="defter-osym-badge">ÖSYM tarzı • sert/eleyici</span>
         </div>
@@ -3495,10 +3650,18 @@ function defterSoruHTML(kelime) {
     const data = defterSagSorular[key];
     const archiveHTML = defterSoruArsivHTML(kelime);
 
-    if (!data || data.yukleniyor || data.soruYukleniyor || !data.soru) {
-        const loading = data?.soruYukleniyor ? 'Soru yenileniyor…' : 'Eleyici pekiştirme sorusu hazırlanıyor…';
-        return `<div class="dsk-loading"><span class="blink-cursor">▌</span> ${loading}</div>
-        <button type="button" class="dsk-yeni-soru-btn" onclick="defterYeniSoru(${defterJSString(kelime)})">🔄 Soru yenile</button>${archiveHTML}`;
+    if (data?.soruYukleniyor) {
+        return `<div class="dsk-loading"><span class="blink-cursor">▌</span> Soru hazırlanıyor…</div>
+        <button type="button" class="dsk-yeni-soru-btn" disabled style="opacity:.65;cursor:wait;">⏳ Üretiliyor</button>${archiveHTML}`;
+    }
+
+    if (!data || data.yukleniyor || !data.soru) {
+        return `<div class="defter-question-idle">
+            <div class="defter-idle-icon">🎯</div>
+            <b>Pekiştirme sorusu kapalı.</b>
+            <span>Bu kelimede yalnızca anlam/not okumak istiyorsan AI soru üretimi çalışmaz. Soru çözmek istediğinde aşağıdaki tuşa bas.</span>
+        </div>
+        <button type="button" class="dsk-yeni-soru-btn" onclick="defterYeniSoru(${defterJSString(kelime)})">🎯 Bu kavram için soru üret</button>${archiveHTML}`;
     }
 
     const secenekler = Array.isArray(data.secenekler) ? data.secenekler : [];
@@ -3564,7 +3727,8 @@ function defterArsiviAc(kelime) {
     const box = document.getElementById('defter-history-box');
     if (box) {
         box.open = true;
-        box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (defterIsMobileLayout()) defterMobileScrollIntoView('#defter-history-box', 'smooth');
+        else box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 }
 
@@ -3650,28 +3814,40 @@ function defterEnsurePekistirme(kelime) {
     const key = defterAIKey(kelime);
     if (!kelime) return;
 
-    // Önce kayıtlı not/soru arşivini kullan. Böylece Defter'e test ekranından dönünce
-    // aynı kavram için AI bilgi notu yeniden üretilmez; token boşa gitmez.
-    const hydrated = defterHydrateFromStored(kelime);
-    if (defterSagSorular[key]?.soru && defterSagSorular[key]?.bilgi) {
-        defterSagGuncelle(kelime);
-        return;
-    }
+    // Önce kayıtlı not/soru arşivini kullan. Soru üretimi artık otomatik başlamaz;
+    // sadece kullanıcı test panelindeki butona basarsa AI soru için token harcanır.
+    defterHydrateFromStored(kelime);
 
     const cached = appData.aiCache?.[defterCacheKey(kelime)];
-    if (cached && cached.soru && cached.bilgi) {
-        defterSagSorular[key] = { ...cached, bilgi: defterCleanNoteText(cached.bilgi, kelime), secenekler: (cached.secenekler || []).map(x => defterCleanOption(x, kelime)) };
+    const current = defterSagSorular[key] || {};
+    if (cached?.bilgi && !current.bilgi) {
+        defterSagSorular[key] = {
+            ...current,
+            bilgi: defterCleanNoteText(cached.bilgi, kelime),
+            yukleniyor: false,
+            notYukleniyor: false,
+            soruYukleniyor: false
+        };
+        // Eski sürümlerde önceden üretilmiş soru varsa gösterilir ama yeni soru otomatik üretilmez.
+        if (cached.soru && !defterSagSorular[key].soru) {
+            defterSagSorular[key].soru = cached.soru;
+            defterSagSorular[key].secenekler = (cached.secenekler || []).map(x => defterCleanOption(x, kelime));
+            defterSagSorular[key].dogru = Number(cached.dogru || 0);
+            defterSagSorular[key].aciklama = cached.aciklama || '';
+            defterSagSorular[key].level = cached.level || defterGetLevel(kelime);
+            defterSagSorular[key].source = cached.source || 'ai';
+        }
         defterSagGuncelle(kelime);
         return;
     }
 
-    if (hydrated && defterSagSorular[key]?.bilgi && !defterSagSorular[key]?.soru) {
+    if (defterSagSorular[key]?.bilgi) {
         defterSagGuncelle(kelime);
-        defterSagPekistir(kelime, { action: 'question', force: false });
         return;
     }
 
-    defterSagPekistir(kelime, { action: 'full', force: false });
+    // Not yine hazırlanabilir; fakat soru kısmı kullanıcı tuşuna basmadan asla çalışmaz.
+    defterSagPekistir(kelime, { action: 'note', force: false });
 }
 
 function defterExtractJSON(raw) {
@@ -3802,16 +3978,19 @@ async function defterSagPekistir(kelime, options = {}) {
 
 async function defterYenileNot(kelime) {
     await defterSagPekistir(kelime, { action: 'note', force: true });
+    defterMobileScrollIntoView('.defter-ai-info', 'smooth');
 }
 
 async function defterYeniSoru(kelime) {
     const level = defterBumpLevel(kelime);
     await defterSagPekistir(kelime, { action: 'question', force: true, level });
+    defterMobileScrollIntoView('.defter-test-panel', 'smooth');
 }
 
 async function defterTumunuYenile(kelime) {
     const level = defterBumpLevel(kelime);
     await defterSagPekistir(kelime, { action: 'full', force: true, level });
+    defterMobileScrollIntoView('.defter-test-panel', 'smooth');
 }
 
 function defterCevapla(kelime, idx) {
@@ -3828,6 +4007,7 @@ function defterCevapla(kelime, idx) {
         saveLocal();
     }
     defterSagGuncelle(kelime);
+    defterMobileScrollIntoView('.dsk-feedback', 'smooth');
 }
 
 function defterSagGuncelle(kelime) {
