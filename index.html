@@ -189,6 +189,8 @@
     <p>AI Destekli Akıllı Eğitim Platformu</p>
     <!-- Cihaz karşılama mesajı -->
     <div id="device-welcome" style="display:none; background:rgba(255,215,0,0.08); border:1px solid rgba(255,215,0,0.3); border-radius:12px; padding:12px 16px; margin-bottom:16px; font-size:0.92rem; color:#ffd700; text-align:center; line-height:1.5;"></div>
+    <!-- Kaldığı yerden devam -->
+    <div id="devam-banner" style="display:none; background:rgba(255,152,0,0.1); border:1px solid rgba(255,152,0,0.4); border-radius:12px; padding:14px 16px; margin-bottom:16px; text-align:center;"></div>
     <!-- Buluttan yükleniyor göstergesi -->
     <div id="cloud-loading" style="display:none; color:#90caf9; font-size:0.85rem; text-align:center; margin-bottom:12px;">☁️ Veriler yükleniyor...</div>
     <input type="text" id="player-name" placeholder="İsmini Gir Şampiyon" autocomplete="off" />
@@ -1830,6 +1832,11 @@ async function bulutVerisiYukle() {
         }
     } catch (err) {
         console.warn("☁️ Bulut verisi yüklenemedi (yerel kullanılıyor):", err.message);
+        // Yerel veri ile de karşılama göster
+        if (appData.playerName) {
+            document.getElementById('player-name').value = appData.playerName;
+            karsilamaGoster(appData);
+        }
     }
     document.getElementById('cloud-loading').style.display = 'none';
 }
@@ -1855,9 +1862,32 @@ function karsilamaGoster(kvVeri) {
 
     el.innerHTML = mesaj;
     el.style.display = 'block';
+
+    // Kayıtlı oturum varsa otomatik devam butonu göster
+    const oturum = appData._session;
+    const devamEl = document.getElementById('devam-banner');
+    if (oturum && oturum.mode && Array.isArray(oturum.sorular) && oturum.sorular.length > 0 && appData.playerName) {
+        const modeAd = oturum.mode === 'ydt' ? 'İNGİLİZCE (YDT) 🇬🇧' : 'EDEBİYAT 📚';
+        const soruNo = (oturum.qIndex || 0) + 1;
+        const topSoru = oturum.sorular.length;
+        devamEl.innerHTML = `
+            <div style="font-size:0.88rem; color:#fff; margin-bottom:10px;">⏸️ <b>${modeAd}</b> modunda ${soruNo}. soruda kalmıştın (toplam ${topSoru} soru)</div>
+            <button onclick="devamEt()" style="width:100%; padding:14px; border-radius:12px; background:linear-gradient(135deg,#ffd700,#ff9800); color:#000; font-weight:900; border:none; cursor:pointer; font-size:1rem; letter-spacing:0.5px; box-shadow:0 4px 15px rgba(255,215,0,0.4);">▶️ KALDĞIM YERDEN DEVAM ET</button>
+        `;
+        devamEl.style.display = 'block';
+    } else {
+        devamEl.style.display = 'none';
+    }
 }
 
-// Bulut + localStorage'a kaydet
+// Kayıtlı oturumdan devam et
+function devamEt() {
+    const oturum = appData._session;
+    if (!oturum || !oturum.mode) return;
+    // İsim alanını doldur
+    if (appData.playerName) document.getElementById('player-name').value = appData.playerName;
+    startGame(oturum.mode);
+}
 let _kayitBekliyor = false;
 async function saveLocal() {
     appData._sonKayit = Date.now();
@@ -1912,7 +1942,7 @@ function oturumuKaydet() {
     mode: activeMode,
     qIndex: qIndex,
     sorular: questions,
-    cevaplar: userAnswers
+    cevaplar: userAnswers.slice() // kopya kaydet
   };
   saveLocal();
 }
@@ -1948,13 +1978,11 @@ function startGame(mode) {
   const oturum = appData._session;
 
   if (oturum && oturum.mode === mode && Array.isArray(oturum.sorular) && oturum.sorular.length > 0) {
-    // KAYITLI OTURUM: görülmüş kısım sabit, görülmemiş kısım karıştırılır
+    // KAYITLI OTURUM: sıra HİÇ bozulmaz, tam kaldığı yerden devam
     const kaydQIndex = Math.min(oturum.qIndex || 0, oturum.sorular.length - 1);
-    const gorulmus   = oturum.sorular.slice(0, kaydQIndex + 1);
-    const gorulmemis = oturum.sorular.slice(kaydQIndex + 1).sort(() => Math.random() - 0.5);
-    questions   = [...gorulmus, ...gorulmemis];
-    userAnswers = oturum.cevaplar
-      ? [...oturum.cevaplar.slice(0, kaydQIndex + 1), ...new Array(gorulmemis.length).fill(null)]
+    questions   = oturum.sorular; // karıştırmadan aynen al
+    userAnswers = oturum.cevaplar && oturum.cevaplar.length === oturum.sorular.length
+      ? oturum.cevaplar
       : new Array(questions.length).fill(null);
     qIndex = kaydQIndex;
   } else {
@@ -1978,7 +2006,7 @@ function startGame(mode) {
 function sifirla() {
   if (!confirm("⚠️ Emin misin?\n\nDefterin, yanlış cevapların, oturum geçmişin ve tüm ilerleme verilerin bu cihazdan SİLİNECEK.\n\nBu işlem geri alınamaz!")) return;
   localStorage.removeItem('megaSimData');
-  const bosVeri = { playerName: "", edebiyat: { topics: {}, qs: {} }, ydt: { topics: {}, qs: {} }, savedWords: { edebiyat: [], ydt: [] }, aiCache: {}, _deviceName: CIHAZ.isim, _deviceId: DEVICE_ID, _sonKayit: Date.now() };
+  const bosVeri = { playerName: "", edebiyat: { topics: {}, qs: {} }, ydt: { topics: {}, qs: {} }, savedWords: { edebiyat: [], ydt: [] }, aiCache: {}, _deviceName: CIHAZ.isim, _deviceId: DEVICE_ID, _sonKayit: Date.now(), _session: null };
   fetch(WORKER_BASE + '/veri-kaydet', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -2123,7 +2151,8 @@ function handleAnswer(c) {
     let cor = questions[qIndex].a || "Eşleştirme Tamamlandı";
     let isC = c.toLowerCase().trim() === cor.toLowerCase().trim();
     userAnswers[qIndex] = { status: isC?'correct':'wrong', userStr: c, correctStr: cor };
-    if(!isC) { appData[activeMode].qs[questions[qIndex].q] = { correct: cor }; }
+    // Hem doğru hem yanlışları kalıcı kaydet (yapıldı işareti)
+    appData[activeMode].qs[questions[qIndex].q] = { correct: cor, status: isC ? 'correct' : 'wrong' };
     oturumuKaydet();
     loadQuestion();
 }
