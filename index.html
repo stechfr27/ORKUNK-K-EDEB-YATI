@@ -197,6 +197,7 @@
     <button class="main-btn" id="flashcards-btn" onclick="openFlashcards()">BELLEK KARTLARI 🃏</button>
     <button class="main-btn" id="history-btn" onclick="openGlobalHistory()">PROFİL & GEÇMİŞ 📊</button>
     <button class="main-btn" id="install-btn" style="display:none; background:linear-gradient(135deg,#1a1a2e,#16213e); border:2px solid var(--gold); color:var(--gold);" onclick="installPWA()">📲 ANA EKRANA EKLE</button>
+    <button class="main-btn" id="reset-btn" onclick="sifirla()" style="background:linear-gradient(135deg,#b71c1c,#7f0000);color:white;margin-top:5px;font-size:0.9rem;padding:12px;">🗑️ TÜM VERİLERİ SIFIRLA</button>
 </div>
 
 <div id="game-wrapper">
@@ -1903,48 +1904,89 @@ function changeBg() {
     document.body.style.backgroundColor = bgs[bgIdx] === 'none' ? '#070709' : 'transparent';
 }
 
-function startGame(mode) {
-  let name = document.getElementById('player-name').value.trim();
-  if (!name) return alert("Lütfen oyuna başlamadan önce ismini gir şampiyon!");
-  appData.playerName = name;
+// Mevcut oturumu appData'ya kaydet (soru sırası + hangi sorudayız)
+// Mevcut oturumu appData'ya kaydet
+function oturumuKaydet() {
+  if (!activeMode || questions.length === 0) return;
+  appData._session = {
+    mode: activeMode,
+    qIndex: qIndex,
+    sorular: questions,
+    cevaplar: userAnswers
+  };
   saveLocal();
-  activeMode = mode;
+}
 
+// Ham soru listesini oluştur
+function yeniSoruListesiOlustur(mode) {
   let raw;
-  if (activeMode === 'ydt') {
+  if (mode === 'ydt') {
     raw = [...ydtQuestions].sort(() => Math.random() - 0.5);
   } else {
     if (kvEdebiyatSorular.length > 0) {
-      const kvSoruMetinleri = new Set(kvEdebiyatSorular.map(s => s.q));
-      const yerelFiltreli = [...literatureQuestions].filter(s => !kvSoruMetinleri.has(s.q));
-      yerelFiltreli.sort(() => Math.random() - 0.5);
-      const kvYeniSorular = kvEdebiyatSorular.filter(s => s.isNew === true);
-      const kvEskiSorular = kvEdebiyatSorular.filter(s => s.isNew !== true);
-      raw = [...kvYeniSorular, ...kvEskiSorular, ...yerelFiltreli];
+      const kvMetinler = new Set(kvEdebiyatSorular.map(s => s.q));
+      const yerel = [...literatureQuestions].filter(s => !kvMetinler.has(s.q)).sort(() => Math.random() - 0.5);
+      const kvYeni = kvEdebiyatSorular.filter(s => s.isNew === true);
+      const kvEski = kvEdebiyatSorular.filter(s => s.isNew !== true);
+      raw = [...kvYeni, ...kvEski, ...yerel];
     } else {
       raw = [...literatureQuestions].sort(() => Math.random() - 0.5);
     }
   }
-
-  questions = raw.map(q => {
-    if (q.type === 'test') {
-      return { ...q, shuffledO: [...new Set(q.o)].sort(() => Math.random() - 0.5) };
-    }
+  return raw.map(q => {
+    if (q.type === 'test') return { ...q, shuffledO: [...new Set(q.o)].sort(() => Math.random() - 0.5) };
     return { ...q };
   });
+}
+
+function startGame(mode) {
+  let name = document.getElementById('player-name').value.trim();
+  if (!name) return alert("Lütfen oyuna başlamadan önce ismini gir şampiyon!");
+  appData.playerName = name;
+  activeMode = mode;
+
+  const oturum = appData._session;
+
+  if (oturum && oturum.mode === mode && Array.isArray(oturum.sorular) && oturum.sorular.length > 0) {
+    // KAYITLI OTURUM: görülmüş kısım sabit, görülmemiş kısım karıştırılır
+    const kaydQIndex = Math.min(oturum.qIndex || 0, oturum.sorular.length - 1);
+    const gorulmus   = oturum.sorular.slice(0, kaydQIndex + 1);
+    const gorulmemis = oturum.sorular.slice(kaydQIndex + 1).sort(() => Math.random() - 0.5);
+    questions   = [...gorulmus, ...gorulmemis];
+    userAnswers = oturum.cevaplar
+      ? [...oturum.cevaplar.slice(0, kaydQIndex + 1), ...new Array(gorulmemis.length).fill(null)]
+      : new Array(questions.length).fill(null);
+    qIndex = kaydQIndex;
+  } else {
+    // YENİ OTURUM
+    questions   = yeniSoruListesiOlustur(mode);
+    userAnswers = new Array(questions.length).fill(null);
+    qIndex      = 0;
+  }
 
   document.getElementById('main-game-title').innerText =
     mode === 'ydt' ? "YDT İNGİLİZCE SİMÜLASYONU 🇬🇧" : "AYT EDEBİYAT SİMÜLASYONU 📚";
   document.getElementById('notebook-panel').style.display = "block";
   renderNotebook();
-
-  userAnswers = new Array(questions.length).fill(null);
-  qIndex = 0;
-
+  oturumuKaydet();
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('game-wrapper').style.display = 'flex';
   loadQuestion();
 }
+
+// TÜM VERİLERİ SIFIRLA
+function sifirla() {
+  if (!confirm("⚠️ Emin misin?\n\nDefterin, yanlış cevapların, oturum geçmişin ve tüm ilerleme verilerin bu cihazdan SİLİNECEK.\n\nBu işlem geri alınamaz!")) return;
+  localStorage.removeItem('megaSimData');
+  const bosVeri = { playerName: "", edebiyat: { topics: {}, qs: {} }, ydt: { topics: {}, qs: {} }, savedWords: { edebiyat: [], ydt: [] }, aiCache: {}, _deviceName: CIHAZ.isim, _deviceId: DEVICE_ID, _sonKayit: Date.now() };
+  fetch(WORKER_BASE + '/veri-kaydet', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deviceId: DEVICE_ID, veri: bosVeri })
+  }).catch(() => {});
+  location.reload();
+}
+
 
 function updateCounters() {
     let rem = questions.length - qIndex - 1;
@@ -2081,7 +2123,8 @@ function handleAnswer(c) {
     let cor = questions[qIndex].a || "Eşleştirme Tamamlandı";
     let isC = c.toLowerCase().trim() === cor.toLowerCase().trim();
     userAnswers[qIndex] = { status: isC?'correct':'wrong', userStr: c, correctStr: cor };
-    if(!isC) { appData[activeMode].qs[questions[qIndex].q] = { correct: cor }; saveLocal(); }
+    if(!isC) { appData[activeMode].qs[questions[qIndex].q] = { correct: cor }; }
+    oturumuKaydet();
     loadQuestion();
 }
 
@@ -2495,12 +2538,17 @@ function goToQuestionFromHistory(mode, encodedQ) {
 
 function closeHistoryModal(e) { if(e) e.stopPropagation(); document.getElementById('history-modal').style.display='none'; }
 
-function nextQuestion() { 
-    if(qIndex < questions.length - 1){ 
-        qIndex++; loadQuestion(); 
-    } else { 
-        alert("Tebrikler Şampiyon! Bu moddaki tüm soruları tamamladın. 🎉 Soru tablosundan eksiklerine bakabilirsin."); 
-    } 
+function nextQuestion() {
+    if(qIndex < questions.length - 1){
+        qIndex++;
+        oturumuKaydet(); // ilerlemeyi kaydet
+        loadQuestion();
+    } else {
+        // Tüm sorular bitti — oturumu sıfırla ki bir sonraki girişte yeniden karıştırılsın
+        appData._session = null;
+        saveLocal();
+        alert("Tebrikler Şampiyon! Bu moddaki tüm soruları tamamladın. 🎉 Soru tablosundan eksiklerine bakabilirsin.");
+    }
 }
 
 // ── PWA / ANA EKRANA EKLE ─────────────────────────────────────────
