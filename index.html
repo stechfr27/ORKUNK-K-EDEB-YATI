@@ -187,6 +187,10 @@
 <div id="start-screen" class="glass-panel">
     <h1>ORKUN KÖKÇÜ EDEBİYATI</h1>
     <p>AI Destekli Akıllı Eğitim Platformu</p>
+    <!-- Cihaz karşılama mesajı -->
+    <div id="device-welcome" style="display:none; background:rgba(255,215,0,0.08); border:1px solid rgba(255,215,0,0.3); border-radius:12px; padding:12px 16px; margin-bottom:16px; font-size:0.92rem; color:#ffd700; text-align:center; line-height:1.5;"></div>
+    <!-- Buluttan yükleniyor göstergesi -->
+    <div id="cloud-loading" style="display:none; color:#90caf9; font-size:0.85rem; text-align:center; margin-bottom:12px;">☁️ Veriler yükleniyor...</div>
     <input type="text" id="player-name" placeholder="İsmini Gir Şampiyon" autocomplete="off" />
     <button class="main-btn" id="start-btn" onclick="startGame('edebiyat')">EDEBİYAT MODU 📚</button>
     <button class="main-btn" id="ydt-btn" onclick="startGame('ydt')">İNGİLİZCE (YDT) 🇬🇧</button>
@@ -303,7 +307,8 @@
     </div>
 </div>
 
-<script>// KV'den gelen sorular
+<script>
+// ── KV SORULARI ──────────────────────────────────────────────────────────────
 let kvEdebiyatSorular = [];
 let kvYuklendi = false;
 
@@ -314,20 +319,43 @@ async function kvSorulariniYukle() {
     if (!res.ok) throw new Error("HTTP " + res.status);
     const json = await res.json();
     if (json.ok && Array.isArray(json.sorular) && json.sorular.length > 0) {
-      const yeniSorular = json.sorular.filter(s => s.isNew === true);
-      const eskiSorular = json.sorular.filter(s => s.isNew !== true);
-      yeniSorular.sort(() => Math.random() - 0.5);
-      eskiSorular.sort(() => Math.random() - 0.5);
-      kvEdebiyatSorular = [...yeniSorular, ...eskiSorular];
-      console.log(`✅ KV'den ${kvEdebiyatSorular.length} soru yüklendi (${yeniSorular.length} yeni).`);
+      const yeni = json.sorular.filter(s => s.isNew === true).sort(() => Math.random() - 0.5);
+      const eski = json.sorular.filter(s => s.isNew !== true).sort(() => Math.random() - 0.5);
+      kvEdebiyatSorular = [...yeni, ...eski];
     }
   } catch (err) {
-    console.warn("⚠️ KV soruları yüklenemedi:", err.message);
+    console.warn("KV yüklenemedi:", err.message);
   }
   kvYuklendi = true;
 }
+kvSorulariniYukle();
 
-kvSorulariniYukle();// ==========================================
+// ── CİHAZ TANIMI & KALICI VERİ SİSTEMİ ──────────────────────────────────────
+function getCihazTipi() {
+  const ua = navigator.userAgent;
+  if (/iPad/.test(ua)) return { emoji: "📱", isim: "iPad" };
+  if (/iPhone/.test(ua)) return { emoji: "📱", isim: "iPhone" };
+  if (/Android.*Mobile/.test(ua)) return { emoji: "📱", isim: "Android Telefon" };
+  if (/Android/.test(ua)) return { emoji: "📟", isim: "Android Tablet" };
+  if (/Macintosh/.test(ua)) return { emoji: "💻", isim: "Mac" };
+  if (/Windows/.test(ua)) return { emoji: "🖥️", isim: "Windows PC" };
+  if (/Linux/.test(ua)) return { emoji: "🖥️", isim: "Linux PC" };
+  return { emoji: "🌐", isim: "Cihaz" };
+}
+
+function getDeviceId() {
+  let id = localStorage.getItem('orkunk_device_id');
+  if (!id) {
+    id = 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 8);
+    localStorage.setItem('orkunk_device_id', id);
+  }
+  return id;
+}
+
+const DEVICE_ID = getDeviceId();
+const CIHAZ = getCihazTipi();
+const WORKER_BASE = "https://small-grass-ecfa.axuemir52.workers.dev";
+// ==========================================
 // 1. AYT EDEBİYAT SORU HAVUZU (120 Soru)
 // ==========================================
 const literatureQuestions = [
@@ -1754,9 +1782,109 @@ const ydtDict = {
 // ==========================================
 // 2. SİSTEM & TEMA DEĞİŞTİRİCİ
 // ==========================================
-let appData = JSON.parse(localStorage.getItem('megaSimData')) || { playerName: "", edebiyat: { topics: {}, qs: {} }, ydt: { topics: {}, qs: {} }, savedWords: { edebiyat: [], ydt: [] }, aiCache: {} };
-// Eski kayıtlarda aiCache yoksa ekle
+// ── CİHAZ TANIMI & KALICI VERİ SİSTEMİ ──────────────────────────────────────
+// Varsayılan boş veri yapısı
+const BOSLUK_VERI = { playerName: "", edebiyat: { topics: {}, qs: {} }, ydt: { topics: {}, qs: {} }, savedWords: { edebiyat: [], ydt: [] }, aiCache: {}, _deviceName: CIHAZ.isim, _deviceId: DEVICE_ID };
+
+// Önce localStorage'dan hızlıca yükle (anlık)
+let appData = JSON.parse(localStorage.getItem('megaSimData')) || JSON.parse(JSON.stringify(BOSLUK_VERI));
 if (!appData.aiCache) appData.aiCache = {};
+if (!appData.savedWords) appData.savedWords = { edebiyat: [], ydt: [] };
+if (!appData.edebiyat) appData.edebiyat = { topics: {}, qs: {} };
+if (!appData.ydt) appData.ydt = { topics: {}, qs: {} };
+
+// Kaydedilmiş oyun oturumu (kaldığı soru takibi)
+// appData içinde saklanır: appData._session = { mode, qIndex, questionsJson }
+// ──────────────────────────────────────────────────────────────────────────────
+
+// Buluttan veri yükle (sayfa açılışında arka planda)
+async function bulutVerisiYukle() {
+    document.getElementById('cloud-loading').style.display = 'block';
+    try {
+        const res = await fetch(`${WORKER_BASE}/veri-yukle?deviceId=${DEVICE_ID}`);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const json = await res.json();
+
+        if (json.ok && json.veri) {
+            const kv = json.veri;
+            // KV verisi localdakinden daha güncel mi? (son kayıt zamanına bak)
+            const kvZaman = kv._sonKayit || 0;
+            const localZaman = appData._sonKayit || 0;
+
+            if (kvZaman >= localZaman) {
+                // Bulut daha güncel → onu kullan, aiCache'i koru (büyük ve local yeterli)
+                const korunanCache = appData.aiCache;
+                appData = kv;
+                if (!appData.aiCache || Object.keys(appData.aiCache).length === 0) {
+                    appData.aiCache = korunanCache;
+                }
+                // localStorage'ı da güncelle
+                localStorage.setItem('megaSimData', JSON.stringify(appData));
+            }
+            // Kullanıcı adını input'a yaz
+            if (appData.playerName) {
+                document.getElementById('player-name').value = appData.playerName;
+            }
+            karsilamaGoster(json.veri);
+        }
+    } catch (err) {
+        console.warn("☁️ Bulut verisi yüklenemedi (yerel kullanılıyor):", err.message);
+    }
+    document.getElementById('cloud-loading').style.display = 'none';
+}
+
+// Cihaz karşılama mesajını göster
+function karsilamaGoster(kvVeri) {
+    const el = document.getElementById('device-welcome');
+    const ad = kvVeri?.playerName || appData.playerName;
+    const oncekiCihaz = kvVeri?._deviceName;
+    const buCihaz = CIHAZ.isim;
+
+    let mesaj = `${CIHAZ.emoji} <b>${buCihaz}</b> cihazından hoş geldin`;
+    if (ad) mesaj += `, <b>${ad}</b>`;
+    mesaj += `!`;
+
+    // Farklı cihazdan girişte ek bilgi
+    if (oncekiCihaz && oncekiCihaz !== buCihaz) {
+        mesaj += `<br><span style="font-size:0.82rem; color:#ffcc80;">Son oturumun <b>${oncekiCihaz}</b>'daydı — veriler senkronize edildi ✓</span>`;
+    } else if (kvVeri?._sonKayit) {
+        const tarih = new Date(kvVeri._sonKayit).toLocaleDateString('tr-TR', { day:'numeric', month:'long', hour:'2-digit', minute:'2-digit' });
+        mesaj += `<br><span style="font-size:0.82rem; color:#a5d6a7;">Son oturum: ${tarih}</span>`;
+    }
+
+    el.innerHTML = mesaj;
+    el.style.display = 'block';
+}
+
+// Bulut + localStorage'a kaydet
+let _kayitBekliyor = false;
+async function saveLocal() {
+    appData._sonKayit = Date.now();
+    appData._deviceName = CIHAZ.isim;
+    appData._deviceId = DEVICE_ID;
+    localStorage.setItem('megaSimData', JSON.stringify(appData));
+
+    // Bulutu debounce ile güncelle (1.5 saniye bekle, üst üste çağrılırsa sadece son kayıt gider)
+    if (_kayitBekliyor) return;
+    _kayitBekliyor = true;
+    setTimeout(async () => {
+        _kayitBekliyor = false;
+        try {
+            await fetch(`${WORKER_BASE}/veri-kaydet`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ deviceId: DEVICE_ID, veri: appData })
+            });
+        } catch (e) {
+            // Bulut kayıt başarısız olsa bile local kayıt var, sorun değil
+            console.warn("☁️ Bulut kaydı başarısız:", e.message);
+        }
+    }, 1500);
+}
+
+// Sayfa açılışında buluttan yükle
+bulutVerisiYukle();
+// ──────────────────────────────────────────────────────────────────────────────
  
 
 let activeMode = '', questions = [], qIndex = 0, userAnswers = [], bgIdx = 0;
@@ -2011,7 +2139,6 @@ function renderNotebook() {
     });
 }
 function removeW(w) { appData.savedWords[activeMode] = appData.savedWords[activeMode].filter(x=>x!==w); saveLocal(); renderNotebook(); }
-function saveLocal() { localStorage.setItem('megaSimData', JSON.stringify(appData)); }
 function returnToMainMenu() { document.getElementById('game-wrapper').style.display='none'; document.getElementById('start-screen').style.display='flex'; }
 
 // AI: prompt/Worker değişince sürümü artır — eski (hatalı) önbellek kullanılmasın
@@ -2104,7 +2231,7 @@ function prevCard() { if(fcI>0){ fcI--; renderFC(); }}
 function closeFlashcards(e) { if(e) e.stopPropagation(); document.getElementById('flashcards-modal').style.display='none'; }
 
 // ── AI STREAMING YARDIMCI (Cloudflare Worker, Önbellekli) ───────────────────
-const WORKER_URL = "https://small-grass-ecfa.axuemir52.workers.dev/";
+const WORKER_URL = WORKER_BASE + "/";
 
 async function streamAI(prompt, targetEl, prefix, cacheKey) {
     const kullaniciMesajiLower = prompt.toLowerCase().trim();
