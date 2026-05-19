@@ -4107,20 +4107,27 @@ function defterExtractJSON(raw) {
 }
 
 async function defterFetchAIJSON(prompt) {
-    const res = await fetch(WORKER_BASE + "/", {
+    // Worker / endpoint'i POST kabul etmiyor. Anthropic API direkt kullanılıyor.
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, tier: 'smart' })
+        body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 1000,
+            system: "Sen ÖSYM sınav sorusu hazırlayan uzman bir Türk eğitimcisin. Yanıtın YALNIZCA geçerli JSON olmalı — markdown bloğu, açıklama veya fazladan metin yazma.",
+            messages: [{ role: "user", content: prompt }]
+        })
     });
 
     const text = await res.text();
-    if (!res.ok) throw new Error(`API ${res.status}: ${text.slice(0, 140)}`);
+    if (!res.ok) throw new Error(`Anthropic API ${res.status}: ${text.slice(0, 140)}`);
 
-    let raw = text;
+    let raw = '';
     try {
         const json = JSON.parse(text);
-        raw = (json.choices?.[0]?.message?.content || json.content || json.text || json.answer || '').trim();
-        if (!raw && typeof json === 'object') raw = JSON.stringify(json);
+        // Anthropic format: content[0].text
+        raw = (json.content?.[0]?.text || '').trim();
+        if (!raw) raw = text;
     } catch (_) {
         raw = text;
     }
@@ -4351,10 +4358,15 @@ async function streamAI(prompt, targetEl, prefix, cacheKey) {
     const cur = () => targetEl.querySelector('#_cur');
 
     try {
-        const res = await fetch(WORKER_URL, {
+        // Worker / endpoint'i POST kabul etmiyor → Anthropic API direkt kullanılıyor.
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt, tier: 'smart' })
+            body: JSON.stringify({
+                model: "claude-sonnet-4-20250514",
+                max_tokens: 1500,
+                messages: [{ role: "user", content: prompt }]
+            })
         });
 
         if (!res.ok) {
@@ -4364,7 +4376,8 @@ async function streamAI(prompt, targetEl, prefix, cacheKey) {
         }
 
         const json = await res.json();
-        const raw = json.choices?.[0]?.message?.content || '';
+        // Anthropic format: content[0].text
+        const raw = json.content?.[0]?.text || '';
 
         if (!raw) {
             targetEl.innerHTML = prefix + "<b style='color:var(--wrong);'>Yanıt alınamadı. Tekrar deneyin.</b>";
@@ -4387,10 +4400,7 @@ async function streamAI(prompt, targetEl, prefix, cacheKey) {
         const cursor = targetEl.querySelector('.blink-cursor');
         if (cursor) cursor.remove();
 
-        // =========================================================================
-        // ⚡ GÜNCEL HAFIZA DUVARI: Sadece normal sohbetleri önbelleğe kaydet
-        // =========================================================================
-        if (storageKey && !json.isQuiz) {
+        if (storageKey) {
             const finalHTML = displayed
                 .replace(/\n/g, '<br>')
                 .replace(/\*\*(.*?)\*\*/g, '<b style="color:var(--gold);">$1</b>')
@@ -4399,9 +4409,6 @@ async function streamAI(prompt, targetEl, prefix, cacheKey) {
             if (keys.length >= 400) delete appData.aiCache[keys[0]];
             appData.aiCache[storageKey] = finalHTML;
             saveLocal();
-            console.log("Normal sohbet cache'e kaydedildi. 💾");
-        } else {
-            console.log("Soru çözme modu: Önbellek okuma/yazma tamamen pas geçildi. ⛔");
         }
 
     } catch(e) {
