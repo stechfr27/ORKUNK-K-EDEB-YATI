@@ -1062,16 +1062,26 @@ function sortNewFirstForUser(list, mode) {
   });
 }
 async function fetchQuestionMode(mode) {
-  try {
-    const res = await fetch(`https://small-grass-ecfa.axuemir52.workers.dev/sorular?mod=${encodeURIComponent(mode)}`);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const json = await res.json();
-    const arr = Array.isArray(json.sorular) ? json.sorular : (Array.isArray(json.questions) ? json.questions : []);
-    return arr.map(x => normalizeKVQuestion(x, mode)).filter(Boolean);
-  } catch (err) {
-    console.warn(`${mode} KV yüklenemedi:`, err.message);
-    return [];
+  const urls = [
+    `${QUESTION_WORKER_BASE}/questions?mode=${encodeURIComponent(mode)}&limit=120`,
+    `${QUESTION_WORKER_BASE}/sorular?mod=${encodeURIComponent(mode)}&limit=120`,
+    `${WORKER_BASE}/sorular?mod=${encodeURIComponent(mode)}`
+  ];
+  let lastError = '';
+  for (const url of urls) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const json = await res.json();
+      const arr = Array.isArray(json.items) ? json.items : (Array.isArray(json.sorular) ? json.sorular : (Array.isArray(json.questions) ? json.questions : []));
+      if (arr.length) return arr.map(x => normalizeKVQuestion(x, mode)).filter(Boolean);
+      lastError = 'boş havuz';
+    } catch (err) {
+      lastError = err.message || String(err);
+    }
   }
+  console.warn(`${mode} KV yüklenemedi:`, lastError);
+  return [];
 }
 async function kvSorulariniYukle() {
   if (kvYuklendi) return;
@@ -1080,7 +1090,8 @@ async function kvSorulariniYukle() {
     fetchQuestionMode('yazar-eser'),
     fetchQuestionMode('ydt')
   ]);
-  kvSorularByMode['yazar-eser'] = [...yazar, ...karisik.filter(isYazarEserQuestion)].filter(Boolean);
+  // Worker tarafındaki mode ayrımı esas alınır; karışık sorular artık Yazar–Eser'e taşınmaz.
+  kvSorularByMode['yazar-eser'] = yazar.filter(Boolean);
   kvSorularByMode['edebiyat-karisik'] = karisik.filter(q => !isYazarEserQuestion(q));
   kvSorularByMode.ydt = ydt;
   kvEdebiyatSorular = [...kvSorularByMode['edebiyat-karisik'], ...kvSorularByMode['yazar-eser']];
@@ -1113,6 +1124,7 @@ function getDeviceId() {
 const DEVICE_ID = getDeviceId();
 const CIHAZ = getCihazTipi();
 const WORKER_BASE = "https://small-grass-ecfa.axuemir52.workers.dev";
+const QUESTION_WORKER_BASE = "https://soru-otomasyonu.axuemir52.workers.dev";
 // ==========================================
 // 1. AYT EDEBİYAT SORU HAVUZU (120 Soru)
 // ==========================================
@@ -6537,7 +6549,7 @@ ${schema}`;
       sessionStore: !!appData._sessions,
       currentMode: activeMode || null,
       currentFilter: activeMode ? v13Filter(activeMode) : null,
-      endpoints: ['edebiyat-karisik','yazar-eser','ydt'].map(m => `${WORKER_BASE}/sorular?mod=${encodeURIComponent(m)}`),
+      endpoints: ['edebiyat-karisik','yazar-eser','ydt'].map(m => `${QUESTION_WORKER_BASE}/questions?mode=${encodeURIComponent(m)}&limit=120`),
       ydtSeparated: true,
       authorWorkSeparated: true
     };
