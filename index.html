@@ -7553,5 +7553,411 @@ ${schema}`;
 })();
 </script>
 
+<script>
+// ── v15: AI bağlantı güvenliği + gerçek öğretici açıklama modu ───────────────
+(function(){
+  if (window.__AI_CONNECTION_AND_EXPLAIN_V15__) return;
+  window.__AI_CONNECTION_AND_EXPLAIN_V15__ = true;
+
+  const AI_WORKER_ROOT = ((typeof QUESTION_WORKER_BASE !== 'undefined' && QUESTION_WORKER_BASE) ? QUESTION_WORKER_BASE : 'https://soru-otomasyonu.axuemir52.workers.dev').replace(/\/+$/, '') + '/';
+  const V15_EXPLAIN_STATE = {};
+
+  function esc(v){ return String(v ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch])); }
+  function strip(v){ return String(v ?? '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim(); }
+  function norm(v){ return strip(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ı/g,'i').replace(/[^a-z0-9çğıöşüâîû]+/gi,' ').replace(/\s+/g,' ').trim(); }
+  function line(prompt, key){ const m = String(prompt||'').match(new RegExp('^' + key + ':(.*)$','mi')); return m ? m[1].trim() : ''; }
+  function letter(i){ return ['A','B','C','D','E'][i] || String(i+1); }
+  function optionList(q){
+    if (Array.isArray(q?.shuffledO) && q.shuffledO.length) return q.shuffledO;
+    if (Array.isArray(q?.o) && q.o.length) return q.o;
+    if (Array.isArray(q?.options) && q.options.length) return q.options;
+    if (Array.isArray(q?.secenekler) && q.secenekler.length) return q.secenekler;
+    return [];
+  }
+
+  const FACTS = {
+    'baki': {type:'Divan şairi', anchors:['Sultanü’ş Şuara unvanı','Kanuni Mersiyesi','güçlü ve pürüzsüz söyleyiş'], summary:'Bâkî, Divan edebiyatında Sultanü’ş Şuara unvanı ve Kanuni Mersiyesi ile ayırt edilir.', trap:'Yakın divan şairleriyle karıştırılır; özellikle Fuzûlî, Nef’î, Nâbî ve Nedim güçlü çeldiricidir.'},
+    'fuzuli': {type:'Divan şairi', anchors:['Leyla ile Mecnun','Şikâyetname','ızdırap/lirizm'], summary:'Fuzûlî; Leyla ile Mecnun, Şikâyetname ve ızdıraplı-lirik söyleyişle tanınır.', trap:'Bâkî ile aynı gelenekten gelir ama Bâkî’nin ayırt edici ipucu Kanuni Mersiyesi ve Sultanü’ş Şuara’dır.'},
+    'nefi': {type:'Divan şairi', anchors:['kaside ustalığı','hiciv','Siham-ı Kaza'], summary:'Nef’î kaside ve hiciv ustasıdır; Siham-ı Kaza ile ayırt edilir.', trap:'Kaside/hiciv ipucu yoksa Nef’î çoğu zaman çeldiricidir.'},
+    'nabi': {type:'Divan şairi', anchors:['hikemî tarz','Hayriyye','öğretici söyleyiş'], summary:'Nâbî, hikemî/öğretici tarz ve Hayriyye ile öne çıkar.', trap:'Öğüt ve hikmet yoksa Nâbî güçlü ama yanlış bir çeldirici olabilir.'},
+    'nedim': {type:'Divan şairi', anchors:['Lale Devri','mahallileşme','şarkı'], summary:'Nedim; Lale Devri, mahallileşme eğilimi ve şarkı türündeki başarısıyla bilinir.', trap:'Lale Devri veya şarkı ipucu yoksa Nedim çoğu soruda çeldirici kalır.'},
+    'seyhi': {type:'Geçiş/Divan çizgisi', anchors:['Harname','ilk fabl örneklerinden biri'], summary:'Şeyhî, Harname adlı eseriyle ve fabl geleneğiyle ayırt edilir.', trap:'Mesnevi ya da fabl ipucu yoksa Şeyhî uzaklaşır.'},
+    'seyh galip': {type:'Divan şairi', anchors:['Hüsn ü Aşk','Sebk-i Hindî'], summary:'Şeyh Galip; Hüsn ü Aşk ve Sebk-i Hindî etkisiyle tanınır.', trap:'Sebk-i Hindî veya Hüsn ü Aşk yoksa çeldirici olabilir.'},
+    'sinasi': {type:'Tanzimat sanatçısı', anchors:['Tercüman-ı Ahval','Şair Evlenmesi','ilk özel gazete/ilk tiyatro'], summary:'Şinasi; Tercüman-ı Ahval, Şair Evlenmesi ve Tanzimat’ın öncü kimliğiyle bilinir.', trap:'Vatan-hürriyet vurgusu Namık Kemal’e, halkı eğitme ve üretkenlik Ahmet Mithat’a götürür.'},
+    'namik kemal': {type:'Tanzimat sanatçısı', anchors:['vatan ve hürriyet','Vatan yahut Silistre','İntibah'], summary:'Namık Kemal; vatan-hürriyet teması, Vatan yahut Silistre ve İntibah ile ayırt edilir.', trap:'İlk gazete/ilk tiyatro ipucu varsa Şinasi; halkı eğitme varsa Ahmet Mithat düşünülür.'},
+    'ahmet mithat efendi': {type:'Tanzimat sanatçısı', anchors:['Hace-i Evvel','halkı eğitme','çok sayıda roman/hikâye'], summary:'Ahmet Mithat Efendi, Hace-i Evvel lakabı ve öğretici-popüler roman anlayışıyla tanınır.', trap:'Sanat için sanat veya Araba Sevdası ipucu Recaizade’ye gider.'},
+    'recaizade mahmut ekrem': {type:'Tanzimat sanatçısı', anchors:['Araba Sevdası','sanat için sanat çizgisi','eski-yeni tartışması'], summary:'Recaizade Mahmut Ekrem; Araba Sevdası ve estetik/sanat için sanat anlayışıyla ayırt edilir.', trap:'Sergüzeşt/Küçük Şeyler Samipaşazade’ye; Karabibik/Zehra Nabizade’ye götürür.'},
+    'samipasazade sezai': {type:'Tanzimat sanatçısı', anchors:['Sergüzeşt','Küçük Şeyler'], summary:'Samipaşazade Sezai; Sergüzeşt romanı ve Küçük Şeyler hikâyesiyle bilinir.', trap:'Zehra/Karabibik ipucu Nabizade Nazım’a aittir.'},
+    'nabizade nazim': {type:'Tanzimat sanatçısı', anchors:['Karabibik','Zehra','realizm/naturalizm'], summary:'Nabizade Nazım; Karabibik, Zehra ve realizm-naturalizm çizgisiyle ayırt edilir.', trap:'Sergüzeşt veya Küçük Şeyler ipucu Samipaşazade Sezai’ye gider.'},
+    'semsettin sami': {type:'Tanzimat sanatçısı', anchors:['Taaşşuk-ı Talat ve Fitnat','Kamus-ı Türkî'], summary:'Şemsettin Sami; Taaşşuk-ı Talat ve Fitnat ile Kamus-ı Türkî üzerinden tanınır.', trap:'Kamus/sözlük ipucu yoksa genellikle dönem çeldiricisidir.'},
+    'orhan veli kanik': {type:'Cumhuriyet şiiri', anchors:['Garip akımı','ölçü-kafiye karşıtlığı','gündelik söyleyiş'], summary:'Orhan Veli, Garip akımı ve şiirde gündelik konuşma dilini öne çıkarmasıyla bilinir.', trap:'İkinci Yeni imgeciliğiyle karıştırılmamalıdır.'},
+    'ilhan berk': {type:'İkinci Yeni', anchors:['kapalı/imgeci şiir','İkinci Yeni'], summary:'İlhan Berk, İkinci Yeni’nin kapalı ve imgeci şiir çizgisinde öne çıkar.', trap:'Garip’in sade/gündelik söyleyişi değil, imgeci kapalılık belirleyicidir.'},
+    'sagu': {type:'İslamiyet öncesi nazım türü', anchors:['ölünün ardından söylenme','ağıt karşılığı','yuğ töreni'], summary:'Sagu, ölen kişinin ardından söylenen ağıt niteliğindeki İslamiyet öncesi şiirdir.', trap:'Koşuk aşk/doğa/yiğitlik; sav atasözü; destan millet hafızasıdır.'},
+    'kosuk': {type:'İslamiyet öncesi nazım türü', anchors:['aşk, doğa, yiğitlik','sığır/şölen','kopuz'], summary:'Koşuk, aşk, doğa ve yiğitlik konularını işleyen sözlü dönem şiiridir.', trap:'Ölüm acısı varsa sagu; özlü söz varsa sav aranır.'},
+    'sav': {type:'İslamiyet öncesi ürün', anchors:['atasözü karşılığı','özlü söz'], summary:'Sav, İslamiyet öncesi Türk edebiyatındaki atasözü niteliğindeki kısa ve özlü sözdür.', trap:'Şiir/nazım türü değil, kalıplaşmış söz ürünüdür.'},
+    'destan': {type:'Sözlü anlatı', anchors:['olağanüstü olaylar','millet hafızası','anonimleşme'], summary:'Destanlar, milletin hayatındaki büyük olayları olağanüstü unsurlarla anlatan sözlü ürünlerdir.', trap:'Belgesel gibi birebir tarih değil; tarihî çekirdeği mitolojik/kurgusal yapıyla işler.'},
+    'mesnevi': {type:'Divan nazım biçimi', anchors:['beyitlerle yazılma','her beyitin kendi içinde kafiyeli olması','uzun anlatılar'], summary:'Mesnevi, beyitlerle yazılan ve her beyiti kendi arasında kafiyelenen divan nazım biçimidir.', trap:'Gazel/kaside gibi tek kafiyeye bağlı değildir; uzun olay anlatımına elverişlidir.'},
+    'gazel': {type:'Divan nazım biçimi', anchors:['aşk, şarap, güzellik','beyit','matla/makta'], summary:'Gazel; aşk, güzellik, şarap gibi temaları işleyen beyit temelli divan nazım biçimidir.', trap:'Övgü amacı ağır basıyorsa kaside; uzun hikâye anlatımı varsa mesnevi aranır.'},
+    'kaside': {type:'Divan nazım biçimi', anchors:['övgü','nesib, methiye, fahriye','beyit'], summary:'Kaside, çoğunlukla din/devlet büyüklerini övmek için yazılan divan nazım biçimidir.', trap:'Hiciv ve kaside ustası Nef’î olabilir; fakat her övgü sorusu otomatik Nef’î değildir.'},
+    'mersiye': {type:'Divan nazım türü', anchors:['ölüm ardından yazılma','ağıt karşılığı'], summary:'Mersiye, divan edebiyatında ölen kişinin ardından yazılan yas şiiridir.', trap:'Halk edebiyatındaki karşılığı ağıt, İslamiyet öncesindeki karşılığı sagudur.'},
+    'agit': {type:'Halk edebiyatı türü', anchors:['ölüm ardından yakılma','halk şiiri'], summary:'Ağıt, halk edebiyatında ölüm veya acı olay üzerine söylenen yas şiiridir.', trap:'Divan edebiyatında mersiye, İslamiyet öncesinde sagu karşılığı vardır.'},
+    'although': {type:'YDT bağlaç', anchors:['zıtlık','-e rağmen'], summary:'Although, iki zıt durumu bağlar; “-mesine rağmen” anlamı verir.', trap:'Because sebep, so that amaç, unless şart bildirir.'},
+    'because': {type:'YDT bağlaç', anchors:['sebep-sonuç','çünkü'], summary:'Because sebep bildirir; kendisinden sonra neden gelir.', trap:'Cümlede zıtlık varsa although/even though gerekir.'},
+    'unless': {type:'YDT bağlaç', anchors:['olumsuz şart','-medikçe'], summary:'Unless “-medikçe/-mazsa” anlamında şart bildirir.', trap:'Sebep veya zıtlık bağlamında kullanılmaz.'},
+    'whose': {type:'YDT relative clause', anchors:['aitlik','whose + noun'], summary:'Whose, relative clause içinde sahiplik/aitlik bildirir ve ardından isim gelir.', trap:'Who kişi özne/nesne, which nesne/şey için kullanılır; sahiplik vermez.'},
+    'clearly': {type:'YDT zarf', anchors:['fiili/sıfatı niteleme','-ly'], summary:'Clearly bir zarftır; “written so clearly” yapısında yazılma biçimini niteler.', trap:'Clear sıfattır; fiili nitelemek için clearly gerekir.'}
+  };
+
+  function factFor(term){
+    const n = norm(term);
+    if (!n) return null;
+    if (FACTS[n]) return FACTS[n];
+    const key = Object.keys(FACTS).find(k => n === k || n.includes(k) || k.includes(n));
+    return key ? FACTS[key] : null;
+  }
+
+  function briefFromApp(term, mode){
+    try {
+      if (typeof getFormat === 'function') {
+        const html = getFormat(term, mode);
+        if (html) return strip(html).replace(/^🦅\s*/, '');
+      }
+    } catch(_) {}
+    try {
+      const dict = (typeof notebookMode === 'function' && notebookMode(mode)==='ydt') ? ydtDict : edebiyatDict;
+      if (dict) {
+        const n = norm(term);
+        const key = Object.keys(dict).find(k => norm(k) === n || n.includes(norm(k)) || norm(k).includes(n));
+        if (key) {
+          const v = dict[key];
+          if (typeof v === 'object') return strip(`${v.m || ''}. ${v.f || ''} ${v.e || ''}`);
+          return strip(v);
+        }
+      }
+    } catch(_) {}
+    const f = factFor(term);
+    return f ? f.summary : '';
+  }
+
+  async function askWorkerRaw(prompt, tier='smart'){
+    const res = await fetch(AI_WORKER_ROOT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: String(prompt || ''), tier })
+    });
+    const text = await res.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch(_) {}
+    if (!res.ok || json?.ok === false) throw new Error((json?.error || text || `Worker ${res.status}`).slice(0, 180));
+    const raw = json?.choices?.[0]?.message?.content || json?.content?.[0]?.text || json?.text || json?.response || text;
+    if (!String(raw || '').trim()) throw new Error('AI boş yanıt döndürdü.');
+    return String(raw).trim();
+  }
+
+  function renderMiniMarkdown(raw){
+    return esc(raw)
+      .replace(/\n/g,'<br>')
+      .replace(/\*\*(.*?)\*\*/g,'<b style="color:var(--gold);">$1</b>')
+      .replace(/(^|<br>)\s*[-•]\s+/g, '$1• ');
+  }
+
+  function localNote(kelime, isYdt){
+    const f = factFor(kelime);
+    if (f) {
+      return `1. Ayırt Edici Bilgi:\n${f.summary}\n\n2. Sınavda Nasıl Yakalanır:\nAna ipuçları: ${f.anchors.join(', ')}.\n\n3. Çeldirici Mantığı:\n${f.trap}`;
+    }
+    const base = briefFromApp(kelime, isYdt ? 'ydt' : 'edebiyat');
+    if (isYdt) return `1. Temel Anlam:\n${base || kelime + ' YDT’de bağlam içinde anlamı belirlenen bir kelime/yapıdır.'}\n\n2. Çözüm İpucu:\nÖnce boşluğun istediği sözcük türünü, sonra cümlenin olumlu-olumsuz yönünü ve bağlaç ipuçlarını kontrol et.\n\n3. Çeldirici Mantığı:\nYakın anlamlı seçenekler doğru görünebilir; fakat cümlenin anlam yönünü bozan şık elenir.`;
+    return `1. Temel Bilgi:\n${base || kelime + ' AYT Edebiyat’ta dönem, tür, sanatçı-eser veya kavram ilişkisiyle sorulabilir.'}\n\n2. Çözüm İpucu:\nSoru kökündeki dönem, tür, eser, unvan ve ayırt edici özelliği birlikte oku.\n\n3. Çeldirici Mantığı:\nYakın dönemden gelen seçenekler gerçek bilgi içerebilir; yanlış olmalarının sebebi soru kökündeki ipucuyla tam örtüşmemeleridir.`;
+  }
+
+  function fallbackQuestion(kelime, isYdt){
+    try {
+      if (typeof defterFallbackPekistirme === 'function') {
+        const fb = defterFallbackPekistirme(kelime, '', Date.now(), 4);
+        return {
+          soru: fb.soru || '',
+          secenekler: fb.secenekler || [],
+          dogru: Number(fb.dogru || 0),
+          aciklama: fb.aciklama || `Doğru cevap, ${kelime} kavramının ayırt edici bilgisini karşılar.`,
+          celdiriciNotlari: fb.celdiriciNotlari || undefined
+        };
+      }
+    } catch(_) {}
+    const f = factFor(kelime);
+    if (f && !isYdt) {
+      return { soru:`${f.anchors[0]} ipucuyla ayırt edilen kavram/sanatçı aşağıdakilerden hangisidir?`, secenekler:[kelime,'Yakın dönem çeldiricisi','Benzer tür çeldiricisi','Uzak dönem çeldiricisi','Genel kavram çeldiricisi'], dogru:0, aciklama:f.summary };
+    }
+    return { soru:`${isYdt ? 'The context requires the meaning' : 'Bu kavramın ayırt edici özelliği'}: ${strip(localNote(kelime, isYdt)).slice(0,120)}...`, secenekler:[kelime,'Yakın çeldirici','Bağlam dışı seçenek','Eksik bilgi','Ters anlam'], dogru:0, aciklama:`Doğru cevap ${kelime}; çünkü soru kökündeki ayırt edici ipucuyla örtüşür.` };
+  }
+
+  function localJSONFromPrompt(prompt){
+    const kelime = line(prompt, 'KELIME') || line(prompt, 'KONU') || line(prompt, 'SORU') || 'Bu kavram';
+    const action = (line(prompt, 'ISTEK') || 'full').toLowerCase();
+    const isYdt = /MOD:\s*YDT/i.test(prompt) || (typeof defterMod !== 'undefined' && defterMod === 'ydt');
+    const bilgi = localNote(kelime, isYdt);
+    if (action === 'note') return { bilgi };
+    const q = fallbackQuestion(kelime, isYdt);
+    if (action === 'question') return q;
+    return { bilgi, ...q };
+  }
+
+  if (typeof window.defterExtractJSON === 'undefined' && typeof defterExtractJSON !== 'undefined') window.defterExtractJSON = defterExtractJSON;
+  window.defterFetchAIJSON = async function(prompt){
+    try {
+      const raw = await askWorkerRaw(prompt, 'smart');
+      return (typeof defterExtractJSON === 'function' ? defterExtractJSON(raw) : JSON.parse(raw));
+    } catch(e) {
+      console.warn('AI JSON worker/fetch aksadı; yerel güvenli üretime geçildi:', e.message);
+      return localJSONFromPrompt(prompt);
+    }
+  };
+
+  window.streamAI = async function(prompt, targetEl, prefix='', cacheKey=''){
+    const lower = String(prompt || '').toLowerCase();
+    const isQuestionRequest = lower.includes('soru sor') || lower.includes('test çöz') || lower.includes('soru getir');
+    const storageKey = (cacheKey && !isQuestionRequest && typeof AI_PROMPT_VER !== 'undefined') ? (`${AI_PROMPT_VER}|${cacheKey}`) : null;
+    if (storageKey && appData?.aiCache?.[storageKey]) {
+      targetEl.style.display = 'block';
+      targetEl.innerHTML = prefix + appData.aiCache[storageKey];
+      return;
+    }
+    targetEl.style.display = 'block';
+    targetEl.innerHTML = prefix + "<span class='blink-cursor'>▌</span>";
+    try {
+      const raw = await askWorkerRaw(prompt, document.getElementById('ai-tier-smart')?.checked ? 'smart' : 'fast');
+      const html = renderMiniMarkdown(raw);
+      targetEl.innerHTML = prefix + html;
+      if (storageKey) {
+        const keys = Object.keys(appData.aiCache || {});
+        if (keys.length >= 400) delete appData.aiCache[keys[0]];
+        appData.aiCache[storageKey] = html;
+        if (typeof saveLocal === 'function') saveLocal();
+      }
+    } catch(e) {
+      const konu = line(prompt, 'KONU') || line(prompt, 'SORU') || line(prompt, 'KELIME') || 'Bu başlık';
+      const isYdt = /MOD:\s*YDT/i.test(prompt) || (typeof activeMode !== 'undefined' && activeMode === 'ydt');
+      const html = renderMiniMarkdown(localNote(konu, isYdt));
+      targetEl.innerHTML = prefix + html + `<div style="margin-top:10px;color:#ffdfaa;font-size:.88rem;">Canlı bağlantı kurulamadı; ekrana yerel çalışma notu getirildi.</div>`;
+    }
+  };
+
+  // Eski fonksiyon adları leksik bağlamda çağrılabiliyorsa onları da yeniden bağla.
+  try { defterFetchAIJSON = window.defterFetchAIJSON; } catch(_) {}
+  try { streamAI = window.streamAI; } catch(_) {}
+
+  function questionText(q){ return strip(q?.q || q?.question || q?.soru || q?.soruMetni || ''); }
+  function correctValue(q){
+    const opts = optionList(q);
+    if (Number.isInteger(q?.answerIndex) && opts[q.answerIndex] !== undefined) return String(opts[q.answerIndex]);
+    if (Number.isInteger(q?.dogru) && opts[q.dogru] !== undefined) return String(opts[q.dogru]);
+    return String(q?.a || q?.answer || q?.dogruCevap || '').trim();
+  }
+  function correctIndex(q, correct){
+    const opts = optionList(q);
+    if (Number.isInteger(q?.answerIndex)) return q.answerIndex;
+    if (Number.isInteger(q?.dogru)) return q.dogru;
+    const n = norm(correct);
+    return opts.findIndex(o => norm(o) === n);
+  }
+  function selectedIndex(opts, selected){
+    const n = norm(selected);
+    return opts.findIndex(o => norm(o) === n);
+  }
+  function baseExplanation(q){ return strip(q?.explanation || q?.aciklama || q?.solution || q?.cozum || ''); }
+  function focusLine(q){
+    const topic = strip(q?.topic || q?.t || q?.family || q?.filterTopic || '');
+    const style = strip(q?.questionStyle || '');
+    const qtxt = questionText(q);
+    if (/söylenemez|yanlıştır|değildir|ulaşılamaz/i.test(qtxt)) return 'Soru olumsuz köklü: doğru seçenek, verilen konu için yanlış/uyumsuz olan yargıdır.';
+    if (/hangisi.*eşleştirilmiştir|eşleştirme/i.test(qtxt)) return 'Soru eşleştirme mantığında: iki bilgi aynı kavramda buluşmalı.';
+    if (style) return `Soru tipi: ${style}. Ana mesele, kökteki ayırt edici ipucunu doğru şıkla eşleştirmek.`;
+    if (topic) return `Konu odağı: ${topic}. Cevap bu başlığın ayırt edici bilgisini karşılamalı.`;
+    return 'Ana mesele, soru kökündeki belirleyici ipucunun hangi seçenekte tam karşılık bulduğunu bulmaktır.';
+  }
+
+  function ydtReason(opt, correct, q){
+    const o = norm(opt), c = norm(correct), txt = questionText(q).toLowerCase();
+    const f = factFor(opt);
+    if (f) return `${f.summary} Bu soruda ise bağlam ${norm(opt)===c ? 'bu anlamı doğrudan istediği için doğru olur' : 'başka bir anlam ilişkisi istediği için elenir'}.`;
+    if (/although|because|unless|so that|in case/.test(o)) {
+      const connectorFacts = {
+        'although':'zıtlık/karşıtlık bildirir', 'because':'sebep bildirir', 'unless':'olumsuz şart bildirir', 'so that':'amaç bildirir', 'in case':'ihtimal/tedbir bildirir'
+      };
+      const k = Object.keys(connectorFacts).find(x => o.includes(x));
+      return `${opt} ${connectorFacts[k] || 'bağlaç görevi görür'}; cümledeki anlam ilişkisi doğru bağlaçla uyuşmadığı için çeldirici olur.`;
+    }
+    if (/clear|clearly|clarity|clearness|cleared/.test(o)) return `${opt} sözcük türü açısından kontrol edilmelidir; boşluk fiili/eylemin yapılış biçimini niteliyorsa zarf gerekir.`;
+    if (/will be announced|will announce|announced|are announcing|have announced/.test(o)) return `${opt} zaman/çatı seçeneğidir; cümlede işi yapan değil sonuçların duyurulması önemliyse edilgen yapı gerekir.`;
+    if (/must have|can't have|should|may|will/.test(o)) return `${opt} modal anlam taşır; ikinci cümledeki “otherwise” ipucu, geçmişe dönük mantıksal çıkarımı belirler.`;
+    return `${opt} anlamca yakın durabilir; fakat cümlenin zaman, bağlaç, sözcük türü veya bağlam yönü doğru şıktaki yapıyı ister.`;
+  }
+
+  function literatureReason(opt, correct, q){
+    const f = factFor(opt);
+    const cf = factFor(correct);
+    if (norm(opt) === norm(correct)) {
+      if (cf) return `${cf.summary} Kökteki belirleyici ipuçları (${cf.anchors.join(', ')}) bu seçenekle örtüşür.`;
+      return baseExplanation(q) || 'Soru kökündeki ayırt edici ipucu bu seçenekle tam örtüşür.';
+    }
+    if (f && cf) return `${f.summary} Ancak bu sorunun ana ipuçları ${cf.anchors.join(', ')} olduğu için cevap ${correct} olur; ${opt} yakın gelen ama farklı ipucu isteyen çeldiricidir.`;
+    if (f) return `${f.summary} Fakat soru kökündeki dönem/eser/tür/özellik bu bilgiyle tam uyuşmadığı için elenir.`;
+    const b = briefFromApp(opt, activeMode || 'edebiyat');
+    if (b) return `${b} Buna rağmen soru kökündeki ayırt edici ipucu doğru şıkla eşleşir; bu seçenek yakın bilgi olarak çeldirici kalır.`;
+    return 'Bu seçenek konu alanına yakın görünse de kökteki ayırt edici dönem, eser, tür veya kavram ilişkisini tam karşılamaz.';
+  }
+
+  function buildBetterTestExplanation(q, ans){
+    const opts = optionList(q);
+    const correct = correctValue(q);
+    const selected = String(ans?.userStr || '').trim();
+    const ci = correctIndex(q, correct);
+    const si = selectedIndex(opts, selected);
+    const isYdt = (typeof normalizeGameMode === 'function' ? normalizeGameMode(activeMode) : activeMode) === 'ydt';
+    const solved = ans?.status === 'correct' || norm(selected) === norm(correct);
+    const exp = baseExplanation(q);
+    let html = `<div class="qa-ai-explanation ai-v15-explanation"><b>🤖 AI Asistan çözümü</b>`;
+    html += `<div class="ai-v15-mini"><b>Çözüm mantığı:</b> ${esc(focusLine(q))}</div>`;
+    html += solved
+      ? `<div class="ai-v15-mini ok">Doğru işaretledin: <b>${ci >= 0 ? letter(ci) + ') ' : ''}${esc(correct)}</b>.</div>`
+      : `<div class="ai-v15-mini no">Senin seçimin <b>${si >= 0 ? letter(si) + ') ' : esc(selected || '—')}</b>; doğru cevap <b>${ci >= 0 ? letter(ci) + ') ' : ''}${esc(correct)}</b>.</div>`;
+    if (exp) html += `<div class="ai-v15-mini"><b>Ana bilgi:</b> ${esc(exp)}</div>`;
+    if (opts.length) {
+      html += `<div class="ai-v15-options">`;
+      opts.forEach((opt, idx) => {
+        const txt = String(opt).trim();
+        const isCorrect = idx === ci || norm(txt) === norm(correct);
+        const isSelected = idx === si;
+        const reason = isYdt ? ydtReason(txt, correct, q) : literatureReason(txt, correct, q);
+        html += `<div class="ai-v15-option ${isCorrect ? 'correct' : 'wrong'} ${isSelected ? 'selected' : ''}">`;
+        html += `<span class="qa-tag ${isCorrect ? 'ok' : 'no'}">${isCorrect ? 'Doğru' : 'Çeldirici'}</span>`;
+        html += `<b>${letter(idx)}) ${esc(txt)}</b>: ${esc(reason)}`;
+        html += `</div>`;
+      });
+      html += `</div>`;
+    }
+    html += `</div>`;
+    return html;
+  }
+
+  function buildBetterFillExplanation(q, ans){
+    const correct = correctValue(q);
+    const selected = String(ans?.userStr || '').trim();
+    const f = factFor(correct);
+    const note = f ? f.summary : (briefFromApp(correct, activeMode) || 'Boşluk, kökteki anlamı tamamlayan kavramı/yapıyı ister.');
+    return `<div class="qa-ai-explanation ai-v15-explanation"><b>🤖 AI Asistan çözümü</b><div class="ai-v15-mini"><b>Beklenen cevap:</b> ${esc(correct)}</div><div class="ai-v15-mini ${norm(selected)===norm(correct)?'ok':'no'}"><b>Senin cevabın:</b> ${esc(selected || '—')}</div><div class="ai-v15-mini"><b>Neden?</b> ${esc(note)}</div></div>`;
+  }
+
+  function buildBetterMatchExplanation(q){
+    const pairs = Array.isArray(q?.pairs) ? q.pairs : [];
+    let html = `<div class="qa-ai-explanation ai-v15-explanation"><b>🤖 AI Asistan çözümü</b><div class="ai-v15-mini">Eşleştirme sorularında her sol öge kendi ayırt edici eser, kavram, dönem veya anlam karşılığıyla bağlanır.</div>`;
+    if (pairs.length) {
+      html += `<div class="ai-v15-options">`;
+      pairs.forEach(p => {
+        const b = factFor(p.l)?.summary || briefFromApp(p.l, activeMode) || '';
+        html += `<div class="ai-v15-option correct"><span class="qa-tag ok">Eşleşme</span><b>${esc(p.l)} → ${esc(p.r)}</b>${b ? ': ' + esc(b) : ''}</div>`;
+      });
+      html += `</div>`;
+    }
+    html += `</div>`;
+    return html;
+  }
+
+  function currentExplainKey(){
+    const q = questions?.[qIndex];
+    const id = (typeof questionId === 'function') ? questionId(q, activeMode) : norm(questionText(q) + ' ' + correctValue(q));
+    return `${activeMode || ''}_${qIndex}_${id}`;
+  }
+  function buildCurrentExplanation(){
+    const q = questions?.[qIndex];
+    const ans = userAnswers?.[qIndex] || {};
+    if (!q) return '';
+    if (q.type === 'match') return buildBetterMatchExplanation(q);
+    if (q.type === 'fill') return buildBetterFillExplanation(q, ans);
+    return buildBetterTestExplanation(q, ans);
+  }
+  function renderPostAnswerV15(u, c){
+    const box = document.getElementById('post-answer-info');
+    if (!box) return;
+    const key = currentExplainKey();
+    let html = '';
+    try {
+      const m = typeof getFormat === 'function' ? getFormat(c, activeMode) : '';
+      if (m) html += `<div class="qa-format-card">${m}</div>`;
+    } catch(_) {}
+    html += `<button type="button" class="qa-ai-explain-btn" onclick="toggleGlobalAiQuestionExplainV10()">🤖 AI asistan açıklasın</button>`;
+    if (V15_EXPLAIN_STATE[key]) html += buildCurrentExplanation();
+    box.innerHTML = html;
+    box.style.display = 'block';
+  }
+
+  window.toggleGlobalAiQuestionExplainV10 = function(){
+    const key = currentExplainKey();
+    V15_EXPLAIN_STATE[key] = !V15_EXPLAIN_STATE[key];
+    const ans = userAnswers?.[qIndex] || {};
+    const q = questions?.[qIndex] || {};
+    renderPostAnswerV15(ans.userStr || '', ans.correctStr || correctValue(q));
+    if (V15_EXPLAIN_STATE[key]) setTimeout(() => document.querySelector('.ai-v15-explanation')?.scrollIntoView({behavior:'smooth', block:'nearest'}), 30);
+  };
+
+  const previousShowInfo = (typeof showInfo === 'function') ? showInfo : null;
+  window.showInfo = function(u, c){
+    const isC = norm(u) === norm(c);
+    const feedback = document.getElementById('feedback');
+    if (feedback) {
+      feedback.innerText = isC ? 'MÜKEMMEL DOĞRU ✅' : 'HATA YAPILDI ❌';
+      feedback.style.color = isC ? 'var(--correct)' : 'var(--wrong)';
+    }
+    renderPostAnswerV15(u, c);
+    const nav = document.getElementById('post-answer-nav');
+    if (nav) nav.style.display = 'block';
+  };
+  try { showInfo = window.showInfo; } catch(_) { if (previousShowInfo) console.warn('showInfo yeniden bağlanamadı; eski sürüm kalabilir.'); }
+
+  function buildBetterDefterExplanation(kelime, data){
+    const opts = Array.isArray(data?.secenekler) ? data.secenekler : [];
+    const ci = Number(data?.dogru || 0);
+    const si = Number(data?.cevaplandi);
+    const correct = opts[ci] || '';
+    let html = `<div class="dsk-ai-explanation ai-v15-explanation"><b>🤖 AI Asistan çözümü</b>`;
+    html += si === ci ? `<div class="ai-v15-mini ok">Doğru cevap: <b>${letter(ci)}) ${esc(correct)}</b>.</div>` : `<div class="ai-v15-mini no">Seçtiğin <b>${letter(si)}) ${esc(opts[si] || '')}</b>; doğru cevap <b>${letter(ci)}) ${esc(correct)}</b>.</div>`;
+    const ana = strip(data?.aciklama || '') || literatureReason(correct, correct, {q:data?.soru, explanation:''});
+    html += `<div class="ai-v15-mini"><b>Ana bilgi:</b> ${esc(ana)}</div>`;
+    html += `<div class="ai-v15-options">`;
+    opts.forEach((opt, idx) => {
+      const isCorrect = idx === ci;
+      let reason = '';
+      try { reason = data?.celdiriciNotlari?.[norm(opt)] || data?.celdiriciNotlari?.[defterNormalize?.(opt)]; } catch(_) {}
+      if (!reason) reason = (defterMod === 'ydt') ? ydtReason(opt, correct, {q:data?.soru}) : literatureReason(opt, correct, {q:data?.soru, explanation:data?.aciklama});
+      html += `<div class="ai-v15-option ${isCorrect ? 'correct' : 'wrong'} ${idx===si?'selected':''}"><span class="qa-tag ${isCorrect ? 'ok' : 'no'}">${isCorrect ? 'Doğru' : 'Çeldirici'}</span><b>${letter(idx)}) ${esc(opt)}</b>: ${esc(reason)}</div>`;
+    });
+    html += `</div></div>`;
+    return html;
+  }
+  try {
+    if (typeof defterBuildAnswerExplainV9 === 'function') {
+      window.defterBuildAnswerExplainV9 = buildBetterDefterExplanation;
+      defterBuildAnswerExplainV9 = buildBetterDefterExplanation;
+    }
+  } catch(_) {}
+
+  const st = document.createElement('style');
+  st.id = 'ai-connection-explain-v15-style';
+  st.textContent = `
+    .ai-v15-explanation { border-left-width:5px; }
+    .ai-v15-mini { margin-top:10px; padding:10px 12px; border-radius:12px; background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.08); }
+    .ai-v15-mini.ok { background:rgba(76,175,80,.11); border-color:rgba(76,175,80,.24); color:#d7ffd9; }
+    .ai-v15-mini.no { background:rgba(244,67,54,.10); border-color:rgba(244,67,54,.22); color:#ffd7d7; }
+    .ai-v15-options { display:grid; gap:9px; margin-top:12px; }
+    .ai-v15-option { padding:10px 12px; border-radius:13px; background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.09); }
+    .ai-v15-option.correct { border-color:rgba(76,175,80,.28); background:rgba(76,175,80,.10); }
+    .ai-v15-option.wrong { border-color:rgba(244,67,54,.16); }
+    .ai-v15-option.selected { box-shadow:0 0 0 2px rgba(255,215,0,.22) inset; }
+    @media(max-width:560px){ .ai-v15-mini,.ai-v15-option{font-size:.93rem; line-height:1.55;} }
+  `;
+  if (!document.getElementById(st.id)) document.head.appendChild(st);
+})();
+</script>
+
 </body>
 </html>
