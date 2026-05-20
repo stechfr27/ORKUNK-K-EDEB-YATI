@@ -9922,5 +9922,397 @@ Tevfik Fikret: Servetifünun şiiri ve toplumsal duyarlığıyla ayrılır.`,
 })();
 </script>
 
+<script>
+/* ==========================================================================
+   v35 — Sadece AI Asistan modalı + cevap sonrası AI Açıklasın düzeltmesi
+   Defter çalışma notu / pekiştirme bölümüne dokunmaz.
+   ========================================================================== */
+(function(){
+  if (window.__ORKUNK_AI_ASISTAN_ACIKLAMA_V35__) return;
+  window.__ORKUNK_AI_ASISTAN_ACIKLAMA_V35__ = true;
+
+  const STYLE_ID = 'orkunk-ai-asistan-aciklama-v35-style';
+  if (!document.getElementById(STYLE_ID)) {
+    const st = document.createElement('style');
+    st.id = STYLE_ID;
+    st.textContent = `
+.ai-v35-title,
+.v35-explain-title {
+  display:block;
+  color: var(--gold) !important;
+  font-size: 1.18rem;
+  font-weight: 950;
+  margin: 14px 0 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255,215,0,0.075);
+  border-left: 4px solid var(--gold);
+  text-shadow: 0 0 12px rgba(255,215,0,0.16);
+}
+.ai-v35-card-line {
+  display:block;
+  margin: 7px 0;
+  padding-left: 4px;
+  line-height: 1.72;
+}
+.ai-v35-name,
+.v35-name {
+  color: var(--gold) !important;
+  font-weight: 950;
+}
+.ai-v35-key,
+.v35-key {
+  color: #ff6b6b !important;
+  font-weight: 950;
+}
+.qa-ai-explanation.v35-box {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(186,104,200,0.30);
+  border-left: 5px solid var(--gemini-color);
+  background: linear-gradient(135deg, rgba(24,16,34,.78), rgba(0,0,0,.42));
+  color: #eee;
+  line-height: 1.66;
+  box-shadow: 0 14px 32px rgba(0,0,0,.24);
+}
+.v35-explain-main-title {
+  color: var(--gold);
+  font-size: 1.22rem;
+  font-weight: 950;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,215,0,.18);
+}
+.v35-explain-line {
+  margin: 8px 0;
+}
+.v35-option-row {
+  margin: 8px 0;
+  padding: 10px 11px;
+  border-radius: 13px;
+  background: rgba(255,255,255,.045);
+  border: 1px solid rgba(255,255,255,.08);
+}
+.v35-option-row.correct {
+  border-color: rgba(76,175,80,.28);
+  background: rgba(76,175,80,.10);
+}
+.v35-option-row.wrong {
+  border-color: rgba(255,152,0,.22);
+  background: rgba(255,152,0,.07);
+}
+.v35-pill {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 2px 8px;
+  margin-right: 6px;
+  border-radius: 999px;
+  font-size: .76rem;
+  font-weight: 950;
+  border: 1px solid rgba(255,255,255,.14);
+}
+.v35-pill.ok { color:#c8e6c9; background:rgba(76,175,80,.14); border-color:rgba(76,175,80,.28); }
+.v35-pill.no { color:#ffd59a; background:rgba(255,152,0,.11); border-color:rgba(255,152,0,.25); }
+.v35-loading { color:#d9c4ff; font-weight:900; }
+.v35-mini-muted { color:#bfc0cc; font-size:.91rem; margin-top:8px; }
+@media(max-width:560px){
+  .qa-ai-explanation.v35-box { padding: 14px; font-size: .94rem; line-height:1.62; }
+  .ai-v35-title,.v35-explain-title { font-size:1.08rem; }
+}
+`;
+    document.head.appendChild(st);
+  }
+
+  function esc(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  }
+  function stripHTML(s){
+    const d = document.createElement('div');
+    d.innerHTML = String(s || '').replace(/<br\s*\/?\s*>/gi,'\n');
+    return (d.textContent || d.innerText || '').replace(/\r/g,'').replace(/\n{3,}/g,'\n\n').trim();
+  }
+  function norm(s){
+    return stripHTML(s).toLowerCase()
+      .replace(/[ç]/g,'c').replace(/[ğ]/g,'g').replace(/[ı]/g,'i').replace(/[ö]/g,'o').replace(/[ş]/g,'s').replace(/[ü]/g,'u')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+  }
+  function hash(str){
+    let h = 2166136261;
+    str = String(str || '');
+    for (let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return (h >>> 0).toString(36);
+  }
+  function letter(i){ return ['A','B','C','D','E'][i] || '?'; }
+  function optionList(q){
+    if (Array.isArray(q?.shuffledO) && q.shuffledO.length) return q.shuffledO;
+    if (Array.isArray(q?.o) && q.o.length) return q.o;
+    if (Array.isArray(q?.options) && q.options.length) return q.options;
+    return [];
+  }
+  function currentMode(){
+    try { return typeof normalizeGameMode === 'function' ? normalizeGameMode(activeMode) : (activeMode || 'edebiyat-karisik'); }
+    catch(_) { return 'edebiyat-karisik'; }
+  }
+  function answerInfo(q){
+    const opts = optionList(q);
+    const ans = (Array.isArray(window.userAnswers) ? window.userAnswers[window.qIndex] : null) || {};
+    const correct = String(q?.a || q?.answer || ans.correctStr || '').trim();
+    const selected = String(ans.userStr || '').trim();
+    const correctIndex = opts.findIndex(x => norm(x) === norm(correct));
+    const selectedIndex = opts.findIndex(x => norm(x) === norm(selected));
+    return { opts, ans, correct, selected, correctIndex, selectedIndex };
+  }
+
+  const NAME_TERMS = [
+    'Orhan Veli','Melih Cevdet','Oktay Rifat','Garip','İkinci Yeni','Süleyman Efendi','Kitabe-i Seng-i Mezar',
+    'Namık Kemal','İbrahim Şinasi','Şinasi','Abdülhak Hamit Tarhan','Recaizade Mahmut Ekrem','Ahmet Mithat Efendi','Samipaşazade Sezai','Nabizade Nazım','Ziya Paşa',
+    'Haldun Taner','Keşanlı Ali Destanı','İşaret Çocukları','Heşt Behişt','Gün Olur Asra Bedel','Eylül','Mehmet Rauf','Cahit Zarifoğlu','Sehî Bey','Cengiz Aytmatov',
+    'Bâkî','Baki','Fuzûlî','Fuzuli','Nedim','Nef’î','Nefi','Nâbî','Nabi','Şeyh Galip','Şeyhî','Leyla ile Mecnun','Harnâme','Hüsn ü Aşk','Siham-ı Kaza','Kanuni Mersiyesi','Hayriyye',
+    'Halit Ziya Uşaklıgil','Aşk-ı Memnu','Mai ve Siyah','Tevfik Fikret','Cenap Şahabettin','Ahmet Haşim','Yakup Kadri Karaosmanoğlu','Reşat Nuri Güntekin','Halide Edip Adıvar','Ömer Seyfettin',
+    'Yaşar Kemal','Orhan Kemal','Kemal Tahir','Oğuz Atay','Yusuf Atılgan','Adalet Ağaoğlu','Peyami Safa','Ahmet Hamdi Tanpınar','Tarık Buğra','Sait Faik Abasıyanık',
+    'Vatan Yahut Silistre','İntibah','Cezmi','Şair Evlenmesi','Tercüman-ı Ahval','Tercüman-ı Ahval Mukaddimesi','Durub-ı Emsal-i Osmaniye','Sahra','Makber','Eşber','Finten',
+    'Kutadgu Bilig','Divânü Lügati’t-Türk','Atabetü’l-Hakayık','Divân-ı Hikmet','Dede Korkut','Manas Destanı','Ergenekon Destanı','Bozkurt Destanı','Göç Destanı',
+    'Suut Kemal Yetkin','Memet Fuat','Vedat Günyol','Nurullah Ataç','Sabahattin Eyüboğlu','Behçet Necatigil'
+  ];
+  const KEY_TERMS = [
+    'ÖSYM','AYT','YDT','doğru cevap','çeldirici','çeldiriciler','ayırt edici','soru kökü','sınav ipucu','ilk','öncü','kurucu','temsilci','temsilcisi',
+    'roman','hikâye','hikaye','tiyatro','şiir','şair','sanatçı','yazar','eser','karakter','kahraman','mesnevi','destan','tezkiresi','makale','gazete',
+    'Tanzimat','Servetifünun','Fecriati','Millî Edebiyat','Cumhuriyet','Divan','Halk edebiyatı','Tekke','akım','dönem','tür','tema','teknik',
+    'realizm','romantizm','sembolizm','parnasizm','naturalizm','modernizm','postmodernizm','toplumcu gerçekçilik','epik tiyatro','psikolojik roman','pastoral şiir','mahallileşme'
+  ];
+  function protectAndReplace(html, terms, cls){
+    const placeholders = [];
+    html = html.replace(/<[^>]+>/g, m => {
+      const token = `§§HTML${placeholders.length}§§`;
+      placeholders.push(m);
+      return token;
+    });
+    terms.slice().sort((a,b)=>b.length-a.length).forEach(t => {
+      if (!t || t.length < 3) return;
+      const re = new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      html = html.replace(re, m => `<span class="${cls}">${m}</span>`);
+    });
+    placeholders.forEach((m,i)=>{ html = html.replace(`§§HTML${i}§§`, m); });
+    return html;
+  }
+  function highlight(html, q){
+    const info = q ? answerInfo(q) : {opts:[]};
+    let names = [...NAME_TERMS, ...(info.opts || []), info.correct || '', info.selected || '', q?.t || '', q?.topic || ''].filter(Boolean);
+    html = protectAndReplace(html, names, 'v35-name');
+    html = protectAndReplace(html, KEY_TERMS, 'v35-key');
+    return html;
+  }
+
+  function formatAiAssistantHtml(raw){
+    const plain = stripHTML(raw)
+      .replace(/^#{1,6}\s*/gm, '## ')
+      .replace(/\n\s*[-*]\s+/g, '\n- ')
+      .replace(/\n{3,}/g,'\n\n');
+    const lines = plain.split('\n');
+    const parts = [];
+    for (let line of lines){
+      const t = line.trim();
+      if (!t) { parts.push('<br>'); continue; }
+      const head = t.match(/^##\s*(.+)$/) || t.match(/^(📌\s*Kimlik|📚\s*Eser ve Tür Bağlantısı|🎯\s*ÖSYM[^:]*|⚖️\s*Karıştırılanlar|🧠\s*Akılda[^:]*|🎯\s*ÖSYM Ek Bilgi)\s*:?$/i);
+      if (head) {
+        parts.push(`<div class="ai-v35-title">${esc(head[1] || head[0])}</div>`);
+        continue;
+      }
+      let safe = esc(t.replace(/^[-*]\s*/, ''));
+      safe = safe.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<b>$1</b>');
+      parts.push(`<span class="ai-v35-card-line">${safe}</span>`);
+    }
+    return highlight(parts.join(''), null).replace(/(<br>\s*){3,}/g,'<br><br>');
+  }
+
+  const oldStream = (typeof window.streamAI === 'function') ? window.streamAI : (typeof streamAI === 'function' ? streamAI : null);
+  if (oldStream && !window.__ORKUNK_STREAM_AI_V35_WRAPPED__) {
+    window.__ORKUNK_STREAM_AI_V35_WRAPPED__ = true;
+    window.streamAI = async function(prompt, targetEl, prefix, cacheKey){
+      const result = await oldStream.apply(this, arguments);
+      try {
+        const isMainAiBox = targetEl && (targetEl.id === 'ai-result-box' || targetEl.id === 'modal-desc');
+        const isDefterArea = targetEl && (targetEl.closest && targetEl.closest('.defter-shell, .defter-main, .defter-side, .defter-card'));
+        if (isMainAiBox && !isDefterArea) {
+          const raw = stripHTML(targetEl.innerHTML);
+          targetEl.innerHTML = (prefix || '') + formatAiAssistantHtml(raw);
+        }
+      } catch(_) {}
+      return result;
+    };
+    try { streamAI = window.streamAI; } catch(_) {}
+  }
+
+  function qKey(q){
+    const info = answerInfo(q);
+    return 'v35_' + hash([currentMode(), q?.id || '', q?.t || q?.topic || '', q?.q || q?.question || q?.soruMetni || '', info.correct, info.opts.join('|')].join('||'));
+  }
+  function readCache(){
+    try { return JSON.parse(localStorage.getItem('orkunk_ai_aciklama_cache_v35') || '{}') || {}; }
+    catch(_) { return {}; }
+  }
+  function writeCache(c){
+    try {
+      const keys = Object.keys(c || {});
+      while (keys.length > 250) { const k = keys.shift(); delete c[k]; }
+      localStorage.setItem('orkunk_ai_aciklama_cache_v35', JSON.stringify(c));
+    } catch(_) {}
+  }
+  const BAD_GENERIC = /(doğrudan örtüşür|tam karşılamaz|yakın görünür|yakın görünse|kayıtlı özel bilgi yok|canlı ai açıklaması|bu başlık|bu konu|gerçek veya yakın bir bilgi gibi durabilir|ayırt edici ipucu ile doğrudan)/i;
+  function cleanAiText(t){
+    return stripHTML(t)
+      .replace(/---\s*\n[\s\S]*?Bugün Kalan Ortak Soru Havuzu:[\s\S]*$/i,'')
+      .replace(/📌\s*Kaynak:[^\n]+/gi,'')
+      .replace(/🌐\s*Kaynak:[^\n]+/gi,'')
+      .replace(/\n{3,}/g,'\n\n')
+      .trim();
+  }
+  function optionExplanationArray(q){
+    const raw = q?.optionExplanations || q?.option_explanations || q?.secenekAciklamalari || q?.şıkAçıklamaları;
+    if (Array.isArray(raw)) return raw.map(stripHTML).slice(0,5);
+    if (raw && typeof raw === 'object') return ['A','B','C','D','E'].map(k => stripHTML(raw[k] || raw[k.toLowerCase()] || ''));
+    return [];
+  }
+  function localStructuredExplanation(q){
+    const info = answerInfo(q);
+    const optEx = optionExplanationArray(q);
+    const qExp = stripHTML(q?.explanation || q?.cozum || q?.çözüm || '');
+    if (optEx.filter(Boolean).length >= 3) {
+      let out = `Doğru Cevap\n${info.correctIndex >= 0 ? letter(info.correctIndex) + ') ' : ''}${info.correct}\n\nNeden Doğru?\n`;
+      out += optEx[info.correctIndex] || qExp || `${info.correct} soru kökündeki temel ipucunu karşılar.`;
+      out += `\n\nÇeldiriciler Neden Elenir?\n`;
+      info.opts.forEach((opt, i) => {
+        if (i === info.correctIndex) return;
+        out += `${letter(i)}) ${opt}: ${optEx[i] || 'Bu seçenek kökte verilen eser, tür, dönem veya kavram bağlantısına gitmediği için elenir.'}\n`;
+      });
+      out += `\nSınav İpucu\nŞıklarda yalnız tanıdık isme değil; kökte verilen eser, tür, dönem ve ayırt edici kavram ilişkisine bak.`;
+      return out.trim();
+    }
+    if (qExp && !BAD_GENERIC.test(qExp) && qExp.length > 80) {
+      return `Doğru Cevap\n${info.correctIndex >= 0 ? letter(info.correctIndex) + ') ' : ''}${info.correct}\n\nNeden Doğru?\n${qExp}\n\nSınav İpucu\nBu tarz sorularda doğru cevap, kökteki özel eser/tür/dönem/anlayış ipuçlarının birlikte okunmasıyla bulunur.`;
+    }
+    return '';
+  }
+  function formatExplanationHtml(raw, q){
+    const text = cleanAiText(raw);
+    const info = answerInfo(q);
+    const lines = text.split('\n');
+    let html = `<div class="qa-ai-explanation v35-box"><div class="v35-explain-main-title">🤖 AI Asistan çözümü</div>`;
+    let inOptions = false;
+    for (let line of lines){
+      const t = line.trim();
+      if (!t) continue;
+      const normalizedHead = t.replace(/[:：]\s*$/,'').trim();
+      if (/^(Doğru Cevap|Neden Doğru\??|Çeldiriciler Neden Elenir\??|Çeldirici Analizi|Sınav İpucu)$/i.test(normalizedHead)) {
+        html += `<div class="v35-explain-title">${esc(normalizedHead)}</div>`;
+        inOptions = /Çeldirici/i.test(normalizedHead);
+        continue;
+      }
+      const optLine = t.match(/^([A-E])\)?\s*[:\-.]?\s*(.+)$/i);
+      if (inOptions && optLine) {
+        const i = 'ABCDE'.indexOf(optLine[1].toUpperCase());
+        const cls = i === info.correctIndex ? 'correct' : 'wrong';
+        const pill = i === info.correctIndex ? 'Doğru' : 'Çeldirici';
+        html += `<div class="v35-option-row ${cls}"><span class="v35-pill ${cls === 'correct' ? 'ok' : 'no'}">${pill}</span>${esc(optLine[1].toUpperCase())}) ${esc(optLine[2])}</div>`;
+        continue;
+      }
+      html += `<div class="v35-explain-line">${esc(t).replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>')}</div>`;
+    }
+    html += `</div>`;
+    return highlight(html, q);
+  }
+  function currentQuestion(){
+    try { return Array.isArray(window.questions) ? window.questions[window.qIndex] : (questions && questions[qIndex]); }
+    catch(_) { return null; }
+  }
+  function renderPostAnswerV35(open){
+    const box = document.getElementById('post-answer-info');
+    if (!box) return;
+    const q = currentQuestion();
+    const key = q ? qKey(q) : '';
+    let html = '';
+    try {
+      const info = q ? answerInfo(q) : {correct:''};
+      const m = typeof getFormat === 'function' ? getFormat(info.correct, activeMode) : '';
+      if (m) html += `<div class="qa-format-card">${m}</div>`;
+    } catch(_) {}
+    html += `<button type="button" class="qa-ai-explain-btn" onclick="toggleGlobalAiQuestionExplainV10()">🤖 AI asistan açıklasın</button>`;
+    if (open && q) {
+      const cache = readCache();
+      if (cache[key]) html += formatExplanationHtml(cache[key], q);
+      else html += `<div class="qa-ai-explanation v35-box"><div class="v35-explain-main-title">🤖 AI Asistan çözümü</div><div class="v35-loading">Açıklama hazırlanıyor…</div></div>`;
+    }
+    box.innerHTML = html;
+    box.style.display = 'block';
+  }
+  async function fetchLiveExplanation(q){
+    const info = answerInfo(q);
+    const local = localStructuredExplanation(q);
+    if (local) return local;
+    const body = {
+      purpose: 'question_explanation',
+      mode: currentMode(),
+      prompt: `Sen uzman bir AYT Edebiyat soru çözümleyicisisin. Aşağıdaki test sorusunu yalnızca çözümlemek için açıkla.\n\nSoru:\n${stripHTML(q?.q || q?.question || q?.soruMetni || '')}\n\nŞıklar:\n${info.opts.map((o,i)=>`${letter(i)}) ${stripHTML(o)}`).join('\n')}\n\nDoğru cevap: ${info.correctIndex >= 0 ? letter(info.correctIndex) + ') ' : ''}${info.correct}\nÖğrencinin seçimi: ${info.selectedIndex >= 0 ? letter(info.selectedIndex) + ') ' : (info.selected || '—')}\nKayıtlı çözüm: ${stripHTML(q?.explanation || q?.cozum || q?.çözüm || '')}\n\nZorunlu format:\nDoğru Cevap\n...\n\nNeden Doğru?\n...\n\nÇeldiriciler Neden Elenir?\nA) ...\nB) ...\nC) ...\nD) ...\nE) ...\n\nSınav İpucu\n...\n\nKurallar: Her yanlış şık için somut yazar-eser-dönem-tür bilgisi ver. Boş kalıp kullanma. "Yakın görünür ama tam karşılamaz" yazma. İç içe madde yapma.`
+    };
+    const base = (typeof WORKER_BASE !== 'undefined' && WORKER_BASE) ? WORKER_BASE : 'https://small-grass-ecfa.axuemir52.workers.dev';
+    const res = await fetch(base + '/', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await res.json();
+    const txt = data?.choices?.[0]?.message?.content || data?.content || '';
+    const cleaned = cleanAiText(txt);
+    if (!cleaned || BAD_GENERIC.test(cleaned)) return local || '';
+    return cleaned;
+  }
+
+  window.__v35ExplainOpen = false;
+  window.toggleGlobalAiQuestionExplainV10 = async function(){
+    const q = currentQuestion();
+    if (!q) return;
+    window.__v35ExplainOpen = !window.__v35ExplainOpen;
+    renderPostAnswerV35(window.__v35ExplainOpen);
+    if (!window.__v35ExplainOpen) return;
+    const key = qKey(q);
+    const cache = readCache();
+    if (cache[key]) {
+      setTimeout(() => document.querySelector('.qa-ai-explanation.v35-box')?.scrollIntoView({behavior:'smooth', block:'nearest'}), 30);
+      return;
+    }
+    try {
+      const text = await fetchLiveExplanation(q);
+      if (text) {
+        const c = readCache();
+        c[key] = text;
+        writeCache(c);
+      }
+    } catch(_) {
+      const local = localStructuredExplanation(q);
+      if (local) { const c = readCache(); c[key] = local; writeCache(c); }
+    }
+    renderPostAnswerV35(true);
+    setTimeout(() => document.querySelector('.qa-ai-explanation.v35-box')?.scrollIntoView({behavior:'smooth', block:'nearest'}), 30);
+  };
+
+  if (typeof window.showInfo === 'function' || typeof showInfo === 'function') {
+    const oldShow = window.showInfo || showInfo;
+    window.showInfo = function(u,c){
+      try {
+        const isC = norm(u) === norm(c);
+        const f = document.getElementById('feedback');
+        if (f) { f.innerText = isC ? 'MÜKEMMEL DOĞRU ✅' : 'HATA YAPILDI ❌'; f.style.color = isC ? 'var(--correct)' : 'var(--wrong)'; }
+        window.__v35ExplainOpen = false;
+        renderPostAnswerV35(false);
+        const nav = document.getElementById('post-answer-nav');
+        if (nav) nav.style.display = 'block';
+      } catch(e) { return oldShow.apply(this, arguments); }
+    };
+    try { showInfo = window.showInfo; } catch(_) {}
+  }
+})();
+</script>
+
 </body>
 </html>
