@@ -10801,5 +10801,186 @@ Tevfik Fikret: Servetifünun şiiri ve toplumsal duyarlığıyla ayrılır.`,
 })();
 </script>
 
+<script>
+/* ==========================================================================
+   v39 — Defter JSON fallback mesajını kaldırır + AI Açıklasın yoğunluk/yenile desteği
+   ========================================================================== */
+(function(){
+  if (window.__ORKUNK_V39_RETRY_DEFTER_FIX__) return;
+  window.__ORKUNK_V39_RETRY_DEFTER_FIX__ = true;
+
+  const st = document.createElement('style');
+  st.id = 'orkunk-v39-retry-style';
+  st.textContent = `
+    .ai-retry-box{border:1px solid rgba(255,215,0,.35);background:rgba(255,215,0,.08);border-radius:16px;padding:14px;margin:10px 0;color:#f5f5f5;line-height:1.6;}
+    .ai-retry-title{color:var(--gold);font-weight:950;font-size:1.06rem;margin-bottom:6px;}
+    .ai-retry-btn{margin-top:10px;border:1px solid rgba(255,215,0,.45);background:rgba(255,215,0,.14);color:var(--gold);font-weight:900;border-radius:999px;padding:9px 14px;cursor:pointer;}
+    .ai-retry-btn:hover{background:rgba(255,215,0,.22);}
+  `;
+  document.head.appendChild(st);
+
+  function esc39(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
+  function strip39(s){const d=document.createElement('div');d.innerHTML=String(s||'').replace(/<\s*br\s*\/?\s*>/gi,'\n');return (d.textContent||d.innerText||'').replace(/\\n/g,'\n').trim();}
+  function isBusy39(s){return /high demand|overload|busy|temporar|try again|rate limit|quota|resource exhausted|yoğun|tekrar dene/i.test(String(s||''));}
+  function workerBase39(){return (typeof WORKER_BASE!=='undefined'&&WORKER_BASE)?WORKER_BASE:(typeof WORKER_URL!=='undefined'&&WORKER_URL?String(WORKER_URL).replace(/\/$/,''):'https://small-grass-ecfa.axuemir52.workers.dev');}
+
+  async function defterFetchAIJSONv39(prompt, action){
+    const res = await fetch(workerBase39() + '/', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,tier:'smart'})});
+    const text = await res.text();
+    let payload = null;
+    try { payload = JSON.parse(text); } catch(_) {}
+    if (!res.ok || payload?.ok === false) {
+      const msg = payload?.message || payload?.error || text.slice(0,180) || 'AI geçici olarak yanıt veremedi.';
+      const err = new Error(msg);
+      err.retryable = Boolean(payload?.retryable) || isBusy39(msg) || res.status === 429 || res.status === 503;
+      throw err;
+    }
+    let raw = text;
+    if (payload) raw = (payload.choices?.[0]?.message?.content || payload.content || payload.text || payload.answer || '').trim() || JSON.stringify(payload);
+    const clean = String(raw || '').replace(/```json|```/gi,'').trim();
+    try { return JSON.parse(clean); } catch(_) {}
+    const first = clean.indexOf('{'), last = clean.lastIndexOf('}');
+    if (first >= 0 && last > first) {
+      try { return JSON.parse(clean.slice(first,last+1)); } catch(_) {}
+    }
+    const plain = strip39(clean);
+    if (plain && plain.length > 20 && action !== 'question') return { bilgi: plain, source:'ai-text-repaired' };
+    const err = new Error('AI yanıtı beklenen biçimde gelmedi. Yeniden deneyebilirsin.');
+    err.retryable = true;
+    throw err;
+  }
+
+  if (typeof defterSagPekistir === 'function') {
+    window.defterSagPekistir = async function(kelime, options = {}){
+      const opts = typeof options === 'boolean' ? { force: options, action: 'full' } : (options || {});
+      const action = opts.action || opts.part || 'full';
+      const force = !!opts.force;
+      const level = Math.max(3, Math.min(5, Number(opts.level || (typeof defterGetLevel==='function' ? defterGetLevel(kelime) : 3))));
+      const seed = force ? `${Date.now()}|L${level}|${Math.random().toString(36).slice(2,7)}` : `ilk|L${level}`;
+      const key = defterAIKey(kelime);
+      const existing = defterSagSorular[key] || {};
+      defterSagSorular[key] = {
+        ...existing,
+        level,
+        yukleniyor: action === 'full' && (!existing.bilgi || !existing.soru),
+        notYukleniyor: action !== 'question',
+        soruYukleniyor: action !== 'note',
+        hata: undefined
+      };
+      defterSagGuncelle(kelime);
+      try {
+        const prompt = defterBuildPrompt(kelime, action, seed, level);
+        const parsed = await defterFetchAIJSONv39(prompt, action);
+        const normalized = defterNormalizeAIData(parsed, kelime, action, existing, seed, level);
+        defterSagSorular[key] = normalized;
+        if (action !== 'question' && normalized.bilgi) defterPersistNote(kelime, normalized.bilgi, level);
+        if (action !== 'note' && normalized.soru) defterPersistQuestion(kelime, normalized, { level, source: 'ai' });
+        if (action === 'full' && !force) {
+          appData.aiCache[defterCacheKey(kelime)] = normalized;
+          saveLocal();
+        }
+      } catch(e) {
+        const merged = { ...existing, level, yukleniyor:false, notYukleniyor:false, soruYukleniyor:false, fallback:false };
+        const retryMsg = isBusy39(e.message) || e.retryable
+          ? 'AI şu anda yoğun. Notu veya soruyu yenile butonuyla tekrar deneyebilirsin.'
+          : 'AI yanıtı beklenen biçimde gelmedi. Yenile butonuyla tekrar deneyebilirsin.';
+        merged.hata = retryMsg;
+        if (action !== 'question') {
+          if (existing.bilgi) merged.bilgi = existing.bilgi;
+          else merged.bilgi = 'Bu not şu anda hazırlanamadı. Yukarıdaki yenile butonuyla tekrar deneyebilirsin.';
+        }
+        if (action !== 'note') {
+          if (existing.soru) {
+            merged.soru = existing.soru;
+            merged.secenekler = existing.secenekler;
+            merged.dogru = existing.dogru;
+            merged.aciklama = existing.aciklama;
+            merged.cevaplandi = existing.cevaplandi;
+          } else {
+            merged.soru = '';
+            merged.secenekler = [];
+            merged.dogru = 0;
+            merged.aciklama = '';
+            merged.cevaplandi = undefined;
+          }
+        }
+        defterSagSorular[key] = merged;
+      }
+      defterSagGuncelle(kelime);
+    };
+    try { defterSagPekistir = window.defterSagPekistir; } catch(_) {}
+  }
+
+  // Eski kötü hata metni localStorage/önbellekten geldiyse ekranda görünmeden temizle.
+  if (typeof defterFormatAI === 'function') {
+    const oldFmt = defterFormatAI;
+    window.defterFormatAI = function(text){
+      const t = String(text || '');
+      if (/AI üretimi aksadı; sistem geçici olarak yerel soruya geçti|AI yanıtı JSON formatında gelmedi/i.test(t)) {
+        return oldFmt('Bu not şu anda hazırlanamadı. Yenile butonuyla tekrar deneyebilirsin.');
+      }
+      return oldFmt(text);
+    };
+    try { defterFormatAI = window.defterFormatAI; } catch(_) {}
+  }
+
+  function q39(){try{return Array.isArray(questions)?questions[qIndex]:null;}catch(_){return null;}}
+  function opts39(q){if(Array.isArray(q?.o))return q.o.map(String);if(Array.isArray(q?.options))return q.options.map(String);return ['A','B','C','D','E'].map(k=>q?.[k]).filter(Boolean).map(String);}
+  function ans39(q){const opts=opts39(q);let a=String(q?.a||q?.answer||q?.dogruCevap||q?.cevap||'').trim();if(/^[A-E]$/i.test(a))a=opts[a.toUpperCase().charCodeAt(0)-65]||a;let idx=opts.findIndex(o=>String(o).trim().toLowerCase()===a.toLowerCase());return {opts,a,idx};}
+  function key39(q){return btoa(unescape(encodeURIComponent(`${q?.id||''}|${q?.t||q?.topic||q?.konu||''}|${q?.q||q?.question||q?.soruMetni||''}|${q?.a||q?.answer||''}`))).slice(0,80);}
+  function cacheRead39(){try{return JSON.parse(localStorage.getItem('orkunk_ai_aciklama_cache_v39')||'{}')||{};}catch(_){return{};}}
+  function cacheWrite39(c){try{localStorage.setItem('orkunk_ai_aciklama_cache_v39',JSON.stringify(c));}catch(_){}}
+  function formatExplain39(text,q){
+    const info=ans39(q); const lines=strip39(text).split(/\n+/).map(x=>x.trim()).filter(Boolean);
+    let html='<div class="v36-explain-wrap"><div class="v36-explain-main-title">🤖 AI Asistan çözümü</div>';
+    let optMode=false;
+    for(const line of lines){
+      const title=line.replace(/:$/,'').trim();
+      if(/^(Doğru Cevap|Neden Doğru\??|Çeldiriciler Neden Elenir\??|Çeldirici Analizi|Sınav İpucu|Soru Köküyle Bağlantı)$/i.test(title)){
+        html+=`<div class="v36-explain-title">${esc39(title.replace(/\?$/,''))}</div>`; optMode=/Çeldirici/i.test(title); continue;
+      }
+      const m=line.match(/^([A-E])\)?\s*[:\-.]?\s*(.+)$/i);
+      if(optMode && m){ const i='ABCDE'.indexOf(m[1].toUpperCase()); const cls=i===info.idx?'correct':'wrong'; html+=`<div class="v36-option-row ${cls}"><span class="v36-pill ${cls==='correct'?'ok':'no'}">${cls==='correct'?'Doğru':'Çeldirici'}</span>${m[1].toUpperCase()}) ${esc39(m[2])}</div>`; }
+      else { const ix=line.indexOf(':'); if(ix>0&&ix<42) html+=`<div class="v36-explain-line"><span class="v36-label">${esc39(line.slice(0,ix).trim())}:</span> ${esc39(line.slice(ix+1).trim())}</div>`; else html+=`<div class="v36-explain-line">${esc39(line)}</div>`; }
+    }
+    return html+'</div>';
+  }
+  function retryBox39(msg){return `<div class="v36-explain-wrap"><div class="v36-explain-main-title">🤖 AI Asistan çözümü</div><div class="ai-retry-box"><div class="ai-retry-title">AI yoğunluğu</div><div>${esc39(msg || 'AI şu anda yoğun. Tekrar deneyebilirsin.')}</div><button type="button" class="ai-retry-btn" onclick="window.retryGlobalAiQuestionExplainV39()">🔄 Tekrar dene</button></div></div>`;}
+  function render39(content){const box=document.getElementById('post-answer-info'); if(!box)return; box.style.display='block'; box.innerHTML=`<button type="button" class="qa-ai-explain-btn" onclick="toggleGlobalAiQuestionExplainV10()">🤖 AI asistan açıklasın</button>`+(content||'');}
+  async function live39(q){
+    const info=ans39(q);
+    const prompt=`Sen uzman bir AYT Edebiyat soru çözümleyicisisin. Aşağıdaki test sorusunu çözümle.\n\nSoru:\n${strip39(q?.q||q?.question||q?.soruMetni||'')}\n\nŞıklar:\n${info.opts.map((o,i)=>`${'ABCDE'[i]}) ${strip39(o)}`).join('\n')}\n\nDoğru cevap: ${info.idx>=0?'ABCDE'[info.idx]+') ':''}${info.a}\nKayıtlı çözüm: ${strip39(q?.explanation||q?.cozum||q?.çözüm||'')}\n\nZorunlu format:\nDoğru Cevap\n...\n\nNeden Doğru?\n...\n\nÇeldiriciler Neden Elenir?\nA) ...\nB) ...\nC) ...\nD) ...\nE) ...\n\nSınav İpucu\n...\n\nKurallar: Her yanlış şık için somut yazar-eser-dönem-tür bilgisi ver. Boş kalıp kullanma. “Doğrudan örtüşür”, “tam karşılamaz”, “kayıtlı özel bilgi yok”, “SİSTEM HATASI” yazma. İç içe madde yapma.`;
+    const res=await fetch(workerBase39()+'/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({purpose:'question_explanation',mode:typeof activeMode!=='undefined'?activeMode:'',prompt,tier:'smart'})});
+    const txt=await res.text(); let data=null; try{data=JSON.parse(txt);}catch(_){ }
+    if(!res.ok || data?.ok===false){ const msg=data?.message||data?.error||txt.slice(0,180); const err=new Error(msg||'AI yoğun.'); err.retryable=Boolean(data?.retryable)||isBusy39(msg)||res.status===503||res.status===429; throw err; }
+    const raw=data?(data.choices?.[0]?.message?.content||data.content||data.text||''):txt;
+    const clean=strip39(raw);
+    if(!clean || /SİSTEM HATASI|high demand|currently experiencing/i.test(clean)){ const err=new Error(clean||'AI yoğun.'); err.retryable=true; throw err; }
+    return clean;
+  }
+  window.retryGlobalAiQuestionExplainV39 = async function(){
+    const q=q39(); if(!q)return; const key=key39(q); render39('<div class="v36-explain-wrap"><div class="v36-explain-main-title">🤖 AI Asistan çözümü</div><div class="v36-loading">Açıklama hazırlanıyor…</div></div>');
+    try{const text=await live39(q); const c=cacheRead39(); c[key]=text; cacheWrite39(c); render39(formatExplain39(text,q));}
+    catch(e){render39(retryBox39(e.retryable?'AI şu anda yoğun. Biraz sonra tekrar deneyebilirsin.':(e.message||'AI açıklaması alınamadı.')));}
+  };
+  window.toggleGlobalAiQuestionExplainV10 = async function(){
+    const q=q39(); if(!q)return; window.__v39ExplainOpen=!window.__v39ExplainOpen;
+    if(!window.__v39ExplainOpen){render39('');return;}
+    const c=cacheRead39(); const key=key39(q); if(c[key]){render39(formatExplain39(c[key],q));return;}
+    await window.retryGlobalAiQuestionExplainV39();
+  };
+  try{
+    const oldShow=window.showInfo||showInfo;
+    window.showInfo=function(u,c){
+      try{ if(typeof oldShow==='function') oldShow.apply(this,arguments); }catch(_){}
+      window.__v39ExplainOpen=false;
+      const box=document.getElementById('post-answer-info');
+      if(box){ box.style.display='block'; box.innerHTML='<button type="button" class="qa-ai-explain-btn" onclick="toggleGlobalAiQuestionExplainV10()">🤖 AI asistan açıklasın</button>'; }
+    };
+    try{showInfo=window.showInfo;}catch(_){ }
+  }catch(_){ }
+})();
+</script>
+
 </body>
 </html>
