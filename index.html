@@ -10318,14 +10318,14 @@ Tevfik Fikret: Servetifünun şiiri ve toplumsal duyarlığıyla ayrılır.`,
 
 <script>
 /* ==========================================================================
-   v36 — AI Asistan ham görünmeden direkt formatlı basım + sade vurgu
+   v37 — AI Asistan direkt sarı başlık renderı; kırmızı/isim vurgusu kaldırıldı
    Defter notu/pekiştirme alanına dokunmaz.
    ========================================================================== */
 (function(){
-  if (window.__ORKUNK_AI_DIRECT_RENDER_V36__) return;
-  window.__ORKUNK_AI_DIRECT_RENDER_V36__ = true;
+  if (window.__ORKUNK_AI_DIRECT_RENDER_V37__) return;
+  window.__ORKUNK_AI_DIRECT_RENDER_V37__ = true;
 
-  const STYLE_ID = 'orkunk-ai-direct-render-v36-style';
+  const STYLE_ID = 'orkunk-ai-direct-render-v37-style';
   if (!document.getElementById(STYLE_ID)) {
     const st = document.createElement('style');
     st.id = STYLE_ID;
@@ -10360,18 +10360,15 @@ Tevfik Fikret: Servetifünun şiiri ve toplumsal duyarlığıyla ayrılır.`,
 }
 .ai-v36-label,
 .v36-label {
-  color: var(--gold) !important;
-  font-weight: 950;
-}
-.ai-v36-name,
-.v36-name {
-  color: #ffe680 !important;
+  color: inherit !important;
   font-weight: 900;
 }
+.ai-v36-name,
+.v36-name,
 .ai-v36-key,
 .v36-key {
-  color: #ff6b6b !important;
-  font-weight: 950;
+  color: inherit !important;
+  font-weight: inherit;
 }
 .v36-explain-wrap {
   margin-top: 12px;
@@ -10417,7 +10414,7 @@ Tevfik Fikret: Servetifünun şiiri ve toplumsal duyarlığıyla ayrılır.`,
   function answerInfo(q){ const opts=optionList(q); const ans=(Array.isArray(window.userAnswers)?window.userAnswers[window.qIndex]:null)||{}; const correct=String(q?.a||q?.answer||ans.correctStr||'').trim(); const selected=String(ans.userStr||'').trim(); const correctIndex=opts.findIndex(x=>norm(x)===norm(correct)); const selectedIndex=opts.findIndex(x=>norm(x)===norm(selected)); return {opts,ans,correct,selected,correctIndex,selectedIndex}; }
   function currentMode(){ try { return typeof normalizeGameMode==='function' ? normalizeGameMode(activeMode) : (activeMode || 'edebiyat-karisik'); } catch(_) { return 'edebiyat-karisik'; } }
   function currentQuestion(){ try { return Array.isArray(window.questions) ? window.questions[window.qIndex] : questions[qIndex]; } catch(_) { return null; } }
-  function qKey(q){ const info=answerInfo(q); return 'v36_'+hash([currentMode(),q?.id||'',q?.t||q?.topic||'',q?.q||q?.question||'',info.correct,info.opts.join('|')].join('||')); }
+  function qKey(q){ const info=answerInfo(q); return 'v37_'+hash([currentMode(),q?.id||'',q?.t||q?.topic||'',q?.q||q?.question||'',info.correct,info.opts.join('|')].join('||')); }
 
   const TITLE_RE = /^(Kimlik|Edebi Kimlik|Edebi Kimlik ve Akım|Genel Özellikleri|Üslup ve Dil|Eser ve Tür Bağlantısı|Önemli Eserleri|Kritik Eserleri|ÖSYM(?:'nin)? Sevdiği Ayırt Edici Bilgi|ÖSYM Noktası|ÖSYM Ek Bilgi|Kritik Analiz|Karıştırılanlar|Karıştırma Noktaları|Akılda Kalacak Kısa Kod|Doğru Cevap|Neden Doğru\??|Çeldirici Analizi|Çeldiriciler Neden Elenir\??|Sınav İpucu|Soru Köküyle Bağlantı)$/i;
   const KEY_TERMS = ['ilk edebi roman','ilk yerli roman','ilk psikolojik roman','ilk köy romanı','ilk tarihi roman','ilk realist roman','ilk tiyatro','ilk makale','ilk özel gazete','ilk pastoral şiir','ilk şair tezkiresi','sahnelenen ilk Türk tiyatrosu','Batılı anlamda ilk tiyatro','toplum için sanat','sanat için sanat','romantizm','realizm','naturalizm','sembolizm','parnasizm','Garip','İkinci Yeni','epik tiyatro','psikolojik roman','pastoral şiir','mahallileşme','modernizm','postmodernizm'];
@@ -10428,10 +10425,7 @@ Tevfik Fikret: Servetifünun şiiri ve toplumsal duyarlığıyla ayrılır.`,
     return html;
   }
   function highlight(html, q){
-    const info = q ? answerInfo(q) : {opts:[],correct:'',selected:''};
-    const names=[...(info.opts||[]), info.correct||'', info.selected||'', q?.t||'', q?.topic||''];
-    html=protectReplace(html,names,'v36-name');
-    html=protectReplace(html,KEY_TERMS,'v36-key');
+    // v37: kırmızı anahtar kelime ve isim vurgusu tamamen kapalı. Sadece bölüm başlıkları sarı kalır.
     return html;
   }
   function cleanRaw(raw){
@@ -10509,8 +10503,8 @@ Tevfik Fikret: Servetifünun şiiri ve toplumsal duyarlığıyla ayrılır.`,
   try { streamAI = window.streamAI; } catch(_) {}
 
   const BAD_GENERIC=/(doğrudan örtüşür|tam karşılamaz|yakın görünür|yakın görünse|kayıtlı özel bilgi yok|canlı ai açıklaması|bu başlık|bu konu|gerçek veya yakın bir bilgi gibi durabilir|ayırt edici ipucu ile doğrudan|karıştırma uyarısı)/i;
-  function readCache(){ try{return JSON.parse(localStorage.getItem('orkunk_ai_aciklama_cache_v36')||'{}')||{};}catch(_){return{};} }
-  function writeCache(c){ try{ const ks=Object.keys(c||{}); while(ks.length>250){const k=ks.shift(); delete c[k];} localStorage.setItem('orkunk_ai_aciklama_cache_v36',JSON.stringify(c)); }catch(_){} }
+  function readCache(){ try{return JSON.parse(localStorage.getItem('orkunk_ai_aciklama_cache_v37')||'{}')||{};}catch(_){return{};} }
+  function writeCache(c){ try{ const ks=Object.keys(c||{}); while(ks.length>250){const k=ks.shift(); delete c[k];} localStorage.setItem('orkunk_ai_aciklama_cache_v37',JSON.stringify(c)); }catch(_){} }
   function optionExplanationArray(q){ const raw=q?.optionExplanations||q?.option_explanations||q?.secenekAciklamalari||q?.şıkAçıklamaları; if(Array.isArray(raw)) return raw.map(stripHTML).slice(0,5); if(raw&&typeof raw==='object') return ['A','B','C','D','E'].map(k=>stripHTML(raw[k]||raw[k.toLowerCase()]||'')); return []; }
   function localStructuredExplanation(q){
     const info=answerInfo(q); const optEx=optionExplanationArray(q); const qExp=stripHTML(q?.explanation||q?.cozum||q?.çözüm||'');
@@ -10578,6 +10572,231 @@ Tevfik Fikret: Servetifünun şiiri ve toplumsal duyarlığıyla ayrılır.`,
       catch(e){ return oldShow.apply(this,arguments); }
     };
     try{ showInfo=window.showInfo; }catch(_){}
+  }
+})();
+</script>
+
+
+
+<script>
+/* ==========================================================================
+   v37 FINAL OVERRIDE — Kırmızı/isim vurgusunu tüm AI render alanlarında kapatır.
+   Sadece bölüm başlıkları sarı kalır. Defter içerik üretimine dokunmaz.
+   ========================================================================== */
+(function(){
+  if (window.__ORKUNK_REMOVE_RED_HIGHLIGHT_V37__) return;
+  window.__ORKUNK_REMOVE_RED_HIGHLIGHT_V37__ = true;
+  const st = document.createElement('style');
+  st.id = 'orkunk-remove-red-highlight-v37-style';
+  st.textContent = `
+    .v23-key-highlight,
+    .v34-ai-key,
+    .v35-key,
+    .ai-v35-key,
+    .v36-key,
+    .ai-v36-key,
+    .v23-name-highlight,
+    .v35-name,
+    .ai-v35-name,
+    .v36-name,
+    .ai-v36-name {
+      color: inherit !important;
+      font-weight: inherit !important;
+      text-shadow: none !important;
+    }
+    .ai-v35-title,
+    .v35-explain-title,
+    .ai-v36-title,
+    .v36-explain-title,
+    .v36-explain-main-title,
+    .v34-ai-heading,
+    .ai-section-title {
+      color: var(--gold) !important;
+    }
+  `;
+  document.head.appendChild(st);
+})();
+</script>
+
+
+
+<script>
+/* ==========================================================================
+   v38 FINAL — Sadece başlık/alt başlık sarı + defter JSON hata toparlama
+   - Kırmızı vurgu tamamen kapalı kalır.
+   - AI Asistan cevabı ham gösterilmez; doğrudan biçimli render edilir.
+   - Defter notlarında yalnız bölüm başlıkları ve satır başı alt başlıklar sarıdır.
+   - AI JSON yerine düz metin dönerse defter notu olarak kaydedilir; saçma fallback hata metni gösterilmez.
+   ========================================================================== */
+(function(){
+  if (window.__ORKUNK_V38_FINAL_FIX__) return;
+  window.__ORKUNK_V38_FINAL_FIX__ = true;
+
+  const STYLE_ID = 'orkunk-v38-final-style';
+  if (!document.getElementById(STYLE_ID)) {
+    const st = document.createElement('style');
+    st.id = STYLE_ID;
+    st.textContent = `
+      .v23-key-highlight,
+      .v34-ai-key,
+      .v35-key,
+      .ai-v35-key,
+      .v36-key,
+      .ai-v36-key,
+      .v23-name-highlight,
+      .v35-name,
+      .ai-v35-name,
+      .v36-name,
+      .ai-v36-name {
+        color: inherit !important;
+        font-weight: inherit !important;
+        text-shadow: none !important;
+      }
+      .ai-v35-title,
+      .v35-explain-title,
+      .ai-v36-title,
+      .v36-explain-title,
+      .v36-explain-main-title,
+      .v34-ai-heading,
+      .v38-defter-heading,
+      .v38-ai-heading {
+        color: var(--gold) !important;
+        font-weight: 950 !important;
+      }
+      .ai-v36-label,
+      .v36-label,
+      .v38-defter-subheading,
+      .v38-ai-subheading {
+        color: var(--gold) !important;
+        font-weight: 950 !important;
+      }
+      .v38-defter-heading {
+        display:block;
+        margin: 14px 0 7px;
+        padding: 6px 0;
+        font-size: 1.18rem;
+        line-height: 1.35;
+        border-bottom: 1px solid rgba(255,215,0,.16);
+      }
+      .v38-defter-line {
+        display:block;
+        margin: 6px 0;
+        line-height: 1.72;
+        color: #e8e8e8;
+      }
+      .v38-defter-subheading {
+        font-size: 1.02rem;
+      }
+      .ai-v36-line,
+      .v36-explain-line {
+        color: #f2f2f2;
+      }
+      .ai-v36-title,
+      .v36-explain-title {
+        color: var(--gold) !important;
+      }
+    `;
+    document.head.appendChild(st);
+  }
+
+  function esc38(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  }
+  function plain38(value){
+    const div = document.createElement('div');
+    div.innerHTML = String(value == null ? '' : value)
+      .replace(/<\s*br\s*\/?\s*>/gi, '\n')
+      .replace(/<\s*\/p\s*>/gi, '\n');
+    return (div.textContent || div.innerText || '')
+      .replace(/\\n/g, '\n')
+      .replace(/\r/g, '')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+  function titleText38(line){
+    return String(line || '')
+      .replace(/^#{1,6}\s*/, '')
+      .replace(/^[📌📚🎯⚖️🧠✨🤖✅❌]\s*/, '')
+      .replace(/[:：]\s*$/, '')
+      .trim();
+  }
+  const TOP_TITLE_RE38 = /^(Kimlik|Edebi Kimlik|Edebi Kimlik ve Akım|Genel Özellikleri|Üslup ve Dil|Eser ve Tür Bağlantısı|Önemli Eserleri|Kritik Eserleri|ÖSYM(?:'nin)? Sevdiği Ayırt Edici Bilgi|ÖSYM Noktası|ÖSYM Ek Bilgi|Kritik Analiz|Karıştırılanlar|Karıştırma Noktaları|Akılda Kalacak Kısa Kod|Önemli Karakterler\s*\/\s*Simgeler|Doğru Cevap|Neden Doğru\??|Çeldiriciler|Çeldirici Analizi|Çeldiriciler Neden Elenir\??|Sınav İpucu|Soru Köküyle Bağlantı)$/i;
+  const SUB_LABEL_RE38 = /^(Şiir|Roman|Hikâye|Hikaye|Tiyatro|Deneme|Eleştiri|Makale|Gazete|Eser|Eserleri|Karakter|Karakterler|Tema|Konu|Dil|Üslup|Ölçü|Biçim|Dönem|Akım|Anlayış|Topluluk|Sembol|İpucu|Sınav İpucu|ÖSYM İpucu|Temel Bağlantı|Karıştırılabilecek Nokta|Toplumcu Gerçekçiler|İkinci Yeni|Garip Akımı|Servetifünun|Tanzimat|Cumhuriyet|Divan Edebiyatı|Halk Edebiyatı|Kaynak)$/i;
+
+  // Defter formatı: sadece başlık ve satır başı alt başlıklar sarı; kelime/isim/kavram kırmızı veya rastgele renkli olmaz.
+  const oldDefterFormat38 = typeof window.defterFormatAI === 'function' ? window.defterFormatAI : (typeof defterFormatAI === 'function' ? defterFormatAI : null);
+  window.defterFormatAI = function(text){
+    const raw = plain38(text);
+    const out = [];
+    raw.split(/\n+/).forEach(original => {
+      let line = String(original || '').trim();
+      if (!line) { out.push('<br>'); return; }
+      line = line.replace(/^[-*•]\s*/, '').replace(/\s+[—–]\s+/g, ': ').trim();
+      const pureTitle = titleText38(line);
+      if (TOP_TITLE_RE38.test(pureTitle)) {
+        out.push(`<span class="v38-defter-heading">${esc38(pureTitle)}</span>`);
+        return;
+      }
+      const idx = line.indexOf(':');
+      if (idx > 0 && idx < 44) {
+        const label = titleText38(line.slice(0, idx));
+        const body = line.slice(idx + 1).trim();
+        const cls = (SUB_LABEL_RE38.test(label) || label.length <= 28) ? 'v38-defter-subheading' : '';
+        out.push(`<span class="v38-defter-line"><span class="${cls}">${esc38(label)}:</span>${body ? ' ' + esc38(body) : ''}</span>`);
+      } else {
+        out.push(`<span class="v38-defter-line">${esc38(line)}</span>`);
+      }
+    });
+    return out.join('').replace(/(<br>\s*){3,}/g, '<br><br>');
+  };
+  try { defterFormatAI = window.defterFormatAI; } catch(_) {}
+
+  // JSON yerine düz metin dönerse defter açıklamasını not olarak kullan; hata/fallback mesajı üretme.
+  const oldExtract38 = typeof window.defterExtractJSON === 'function' ? window.defterExtractJSON : (typeof defterExtractJSON === 'function' ? defterExtractJSON : null);
+  window.defterExtractJSON = function(raw){
+    const clean = String(raw || '').replace(/```json|```/gi, '').trim();
+    if (oldExtract38) {
+      try { return oldExtract38(clean); } catch(_) {}
+    }
+    try { return JSON.parse(clean); } catch(_) {}
+    const first = clean.indexOf('{');
+    const last = clean.lastIndexOf('}');
+    if (first !== -1 && last !== -1 && last > first) {
+      try { return JSON.parse(clean.slice(first, last + 1)); } catch(_) {}
+    }
+    const text = plain38(clean);
+    if (text && text.length > 20) return { bilgi: text, source: 'ai-text-repaired' };
+    throw new Error('AI yanıtı boş geldi.');
+  };
+  try { defterExtractJSON = window.defterExtractJSON; } catch(_) {}
+
+  // Defter notu istenirken JSON dışı cevap gelirse mevcut notu bozma; üretilebilen düz metni kaydet.
+  const oldSag38 = typeof window.defterSagPekistir === 'function' ? window.defterSagPekistir : (typeof defterSagPekistir === 'function' ? defterSagPekistir : null);
+  if (oldSag38 && !window.__DEFTER_SAG_PEKISTIR_V38_WRAPPED__) {
+    window.__DEFTER_SAG_PEKISTIR_V38_WRAPPED__ = true;
+    window.defterSagPekistir = async function(kelime, options = {}){
+      const opts = typeof options === 'boolean' ? { force: options, action: 'full' } : (options || {});
+      try {
+        return await oldSag38.apply(this, arguments);
+      } catch(e) {
+        // Eski fonksiyon normalde kendi catch'ini kullanır; burası yalnız gerçekten dışarı taşarsa devreye girer.
+        try {
+          const key = defterAIKey(kelime);
+          const existing = defterSagSorular[key] || {};
+          defterSagSorular[key] = { ...existing, hata: undefined, yukleniyor:false, notYukleniyor:false, soruYukleniyor:false };
+          if (typeof defterSagGuncelle === 'function') defterSagGuncelle(kelime);
+        } catch(_) {}
+      }
+    };
+    try { defterSagPekistir = window.defterSagPekistir; } catch(_) {}
+  }
+
+  // AI Asistan ve AI Açıklasın alanlarında alt başlık etiketleri de sarı görünsün; kırmızı vurgu yok.
+  if (typeof window.formatAiText === 'function') {
+    // formatAiText v37 içinde closure olduğundan genellikle global değildir; CSS ile v36-label yeterli.
   }
 })();
 </script>
